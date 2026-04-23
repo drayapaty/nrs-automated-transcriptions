@@ -94,47 +94,48 @@ export async function runPipeline(job: Job): Promise<void> {
     // -- Stage 4: translations (optional) ------------------------------------
     const translations: Partial<Record<Language, string>> = {};
     if (req.translate && req.translate.length > 0) {
-      const total = req.translate.length;
-      for (let i = 0; i < total; i++) {
-        const lang = req.translate[i];
-        const pct = 55 + Math.round((i / total) * 25); // 55 → 80
-        await setStatus(job_id, "translating", {
-          stage: "translating",
-          pct,
-          message: `→ ${lang}`,
-        });
-        const translated = await translate(englishText, lang);
-        translations[lang] = translated;
+      await setStatus(job_id, "translating", {
+        stage: "translating",
+        pct: 55,
+        message: `→ ${req.translate.join(", ")} (parallel)`,
+      });
 
-        if (req.metadata?.uuid) {
-          await putLecture(req.metadata.uuid, lang, translated, {
-            metadata: {
-              title: req.metadata.title,
-              date: req.metadata.date,
-              year: req.metadata.year,
-              duration: req.metadata.duration,
-              location: req.metadata.location,
-              source_type: req.metadata.source_type || "lecture",
-              transcription_provider: tr.provider,
-              translation_model: CLAUDE_MODEL,
-            },
-            source_job_id: job_id,
-          });
-
-          // Mirror translations to OpenSearch nrs-lectures-auto-transcribe
-          if (req.index) {
-            await upsertLectureDoc({
-              lecture_id: req.metadata.uuid,
-              lang,
-              text: translated,
-              metadata: req.metadata,
-              transcription_provider: tr.provider,
-              translation_model: CLAUDE_MODEL,
+      // Parallel fan-out — wall-clock = max(per-lang time), not sum.
+      // Essential for Vercel Hobby's 300s function limit.
+      const translatedPairs = await Promise.all(
+        req.translate.map(async (lang) => {
+          const translated = await translate(englishText, lang);
+          if (req.metadata?.uuid) {
+            await putLecture(req.metadata.uuid, lang, translated, {
+              metadata: {
+                title: req.metadata.title,
+                date: req.metadata.date,
+                year: req.metadata.year,
+                duration: req.metadata.duration,
+                location: req.metadata.location,
+                source_type: req.metadata.source_type || "lecture",
+                transcription_provider: tr.provider,
+                translation_model: CLAUDE_MODEL,
+              },
               source_job_id: job_id,
             });
+
+            if (req.index) {
+              await upsertLectureDoc({
+                lecture_id: req.metadata.uuid,
+                lang,
+                text: translated,
+                metadata: req.metadata,
+                transcription_provider: tr.provider,
+                translation_model: CLAUDE_MODEL,
+                source_job_id: job_id,
+              });
+            }
           }
-        }
-      }
+          return [lang, translated] as const;
+        })
+      );
+      for (const [lang, text] of translatedPairs) translations[lang] = text;
     }
 
     // -- Stage 5: OpenSearch chunked indexing (optional) --------------------
