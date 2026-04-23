@@ -2,16 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "src/app/api/jobs/route.ts": {
-      "maxDuration": 800,
-      "memory": 3008
+      "maxDuration": 300,
+      "memory": 1769
     },
     "src/app/api/jobs/[id]/route.ts": {
       "maxDuration": 30,
       "memory": 512
     },
     "src/app/api/jobs/[id]/translate/route.ts": {
-      "maxDuration": 800,
-      "memory": 3008
+      "maxDuration": 300,
+      "memory": 1769
     },
     "src/app/api/jobs/[id]/index/route.ts": {
       "maxDuration": 300,
