@@ -8,8 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "create-jobs-table": "tsx scripts/create-jobs-table.ts",
-    "test-pipeline": "tsx scripts/test-pipeline.ts"
+    "create-tables": "tsx scripts/create-tables.ts",
+    "create-opensearch-index": "tsx scripts/create-opensearch-index.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.87.0",

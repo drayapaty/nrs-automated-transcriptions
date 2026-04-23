@@ -19,6 +19,7 @@ import { transcribe } from "./pipeline/transcribe";
 import { cleanupTranscript } from "./pipeline/cleanup";
 import { translate } from "./pipeline/translate";
 import { indexTranscript } from "./pipeline/index-opensearch";
+import { upsertLectureDoc } from "./pipeline/index-lectures";
 import { CLAUDE_MODEL } from "./clients";
 
 function wordsOf(text: string): number {
@@ -78,6 +79,19 @@ export async function runPipeline(job: Job): Promise<void> {
         },
         source_job_id: job_id,
       });
+
+      // Mirror to OpenSearch nrs-lectures-auto-transcribe (whole-doc index)
+      if (req.index) {
+        await upsertLectureDoc({
+          lecture_id: req.metadata.uuid,
+          lang: "en",
+          text: englishText,
+          metadata: req.metadata,
+          transcription_provider: tr.provider,
+          cleanup_model: req.paragraph === false ? undefined : CLAUDE_MODEL,
+          source_job_id: job_id,
+        });
+      }
     }
 
     // -- Stage 4: translations (optional) ------------------------------------
@@ -109,11 +123,27 @@ export async function runPipeline(job: Job): Promise<void> {
             },
             source_job_id: job_id,
           });
+
+          // Mirror translations to OpenSearch nrs-lectures-auto-transcribe
+          if (req.index) {
+            await upsertLectureDoc({
+              lecture_id: req.metadata.uuid,
+              lang,
+              text: translated,
+              metadata: req.metadata,
+              transcription_provider: tr.provider,
+              translation_model: CLAUDE_MODEL,
+              source_job_id: job_id,
+            });
+          }
         }
       }
     }
 
-    // -- Stage 5: OpenSearch indexing (optional) -----------------------------
+    // -- Stage 5: OpenSearch chunked indexing (optional) --------------------
+    // Writes chunked + embedded English docs to `ask-nrs-lectures` for RAG.
+    // English only — translations live in `nrs-lectures-auto-transcribe`
+    // (whole-doc index, already written above during translation loop).
     let indexed_chunks: number | undefined;
     if (req.index) {
       if (!req.metadata?.uuid) {

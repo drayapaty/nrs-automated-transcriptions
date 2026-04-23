@@ -35,8 +35,10 @@ Admin Page                 Vercel: nrs-automated-transcriptions     External
     │                              │  4. write EN to nrs-lectures-...     ─► DynamoDB
     │                              │  5. translate RU/UK (if asked)  ────► Anthropic
     │                              │  6. write RU/UK to nrs-lectures-... ─► DynamoDB
-    │                              │  7. chunk + embed + index (if asked) ► OpenAI / OpenSearch
-    │                              │  8. mark job done; fire callback_url  │
+    │                              │  7. upsert whole-transcript docs    ─► OpenSearch nrs-lectures-auto-transcribe
+    │                              │     (one doc per lecture_id+lang)     │
+    │                              │  8. chunk EN + embed + index (if asked) ► OpenAI / OpenSearch ask-nrs-lectures
+    │                              │  9. mark job done; fire callback_url  │
     │                              │                                       │
     │  GET /api/jobs/:id           │                                       │
     ├─────────────────────────────►│  read job row from DynamoDB           │
@@ -230,13 +232,16 @@ to this service:
 openssl rand -hex 32
 ```
 
-### 3. Create DynamoDB tables (one-time)
+### 3. Create DynamoDB tables + OpenSearch index (one-time)
 ```bash
 npm run create-tables
+npm run create-opensearch-index
 ```
-Creates two tables in `eu-central-1`:
-- `nrs-transcribe-jobs` (PK `job_id`, TTL on `ttl` for 30-day expiry)
-- `nrs-lectures-auto-transcribe` (PK `lecture_id`, SK `lang`)
+Creates:
+- DynamoDB `nrs-transcribe-jobs` (PK `job_id`, TTL on `ttl` for 30-day expiry)
+- DynamoDB `nrs-lectures-auto-transcribe` (PK `lecture_id`, SK `lang`)
+- OpenSearch `nrs-lectures-auto-transcribe` (mirrors the DynamoDB table, one
+  doc per `(lecture_id, lang)` pair, doc _id `{lecture_id}_{lang}`)
 
 ### 4. Local dev
 ```bash
@@ -306,6 +311,21 @@ const en = await fetch(`https://.../api/lectures/${uuid}/en`, { headers: ... }).
 ```
 
 Or use `callback_url` to skip polling — service POSTs the final job to your URL.
+
+---
+
+## OpenSearch indexes
+
+This service writes to two distinct OpenSearch indexes:
+
+| Index | Shape | Content | Written when |
+|---|---|---|---|
+| `nrs-lectures-auto-transcribe` | one doc per `(lecture_id, lang)` | full transcript in every language (EN + RU + UK + any future lang) | always, when `metadata.uuid` is set and `index: true` |
+| `ask-nrs-lectures` | chunked (~800 tokens/chunk), embedded | **English only** — feeds the RAG pipeline in ask-niranjana-swami | when `index: true` |
+
+Doc IDs are deterministic so re-runs are idempotent:
+- `nrs-lectures-auto-transcribe`: `{lecture_id}_{lang}`
+- `ask-nrs-lectures`: `{uuid}_chunk_{index}`
 
 ---
 
