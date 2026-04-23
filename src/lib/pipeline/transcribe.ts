@@ -60,11 +60,19 @@ export async function transcribeWithDeepgramUrl(
         }
       );
 
-      // Rate-limit / credit exhaustion → rotate key and retry
-      if (res.status === 429 || res.status === 402) {
+      // Key-specific failures → rotate and retry:
+      //   401 = invalid credentials (revoked/deleted key)
+      //   402 = credits exhausted on this key
+      //   403 = key lacks permissions
+      //   429 = rate limited on this key
+      if ([401, 402, 403, 429].includes(res.status)) {
         if (keyIdx + 1 < keys.length) {
+          const errText = await res.text().catch(() => "");
+          console.warn(
+            `[deepgram] key ${keyIdx + 1}/${keys.length} returned ${res.status}; rotating. ${errText.substring(0, 120)}`
+          );
           keyIdx++;
-          await sleep(1000);
+          await sleep(500);
           continue;
         }
         throw new Error(`Deepgram: all keys exhausted (${res.status})`);
