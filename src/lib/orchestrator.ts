@@ -14,7 +14,6 @@
 import type { Job, JobResult, Language } from "./types";
 import { setStatus, setResult, setError } from "./jobs";
 import { putLecture } from "./lectures";
-import { downloadAudio } from "./pipeline/download";
 import { transcribe } from "./pipeline/transcribe";
 import { cleanupTranscript } from "./pipeline/cleanup";
 import { translate } from "./pipeline/translate";
@@ -45,17 +44,15 @@ export async function runPipeline(job: Job): Promise<void> {
   const req = job.request;
 
   try {
-    // -- Stage 1: download ---------------------------------------------------
-    await setStatus(job_id, "downloading", { stage: "downloading", pct: 5 });
-    const dl = await downloadAudio(req.s3_url);
-
-    // -- Stage 2: transcribe -------------------------------------------------
+    // -- Stage 1: transcribe ------------------------------------------------
+    // Deepgram URL mode — Deepgram fetches the presigned S3 URL itself.
+    // No upload from the Vercel function, no size limit, no memory pressure.
     await setStatus(job_id, "transcribing", {
       stage: "transcribing",
       pct: 15,
-      message: `${(dl.bytes / 1024 / 1024).toFixed(1)}MB`,
+      message: "via Deepgram URL mode",
     });
-    const tr = await transcribe(dl.buffer, dl.contentType, req.provider || "auto");
+    const tr = await transcribe(req.s3_url, req.provider || "auto");
 
     // -- Stage 3: cleanup (paragraph + Sanskrit cleanup) --------------------
     let englishText = tr.text;
