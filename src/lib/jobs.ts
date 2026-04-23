@@ -46,6 +46,10 @@ export async function getJob(job_id: string): Promise<Job | null> {
   return (res.Item as Job | undefined) ?? null;
 }
 
+// DynamoDB reserved words we alias in UpdateExpressions:
+//   "status", "result", "progress" (all reserved).
+// error_msg/finished_at/updated_at are NOT reserved, safe as-is.
+
 export async function setStatus(
   job_id: string,
   status: JobStatus,
@@ -56,8 +60,8 @@ export async function setStatus(
       TableName: TABLE_JOBS,
       Key: { job_id },
       UpdateExpression:
-        "SET #s = :s, progress = :p, updated_at = :u",
-      ExpressionAttributeNames: { "#s": "status" },
+        "SET #s = :s, #p = :p, updated_at = :u",
+      ExpressionAttributeNames: { "#s": "status", "#p": "progress" },
       ExpressionAttributeValues: {
         ":s": status,
         ":p": progress,
@@ -76,8 +80,12 @@ export async function setResult(
       TableName: TABLE_JOBS,
       Key: { job_id },
       UpdateExpression:
-        "SET #s = :s, progress = :p, result = :r, updated_at = :u, finished_at = :f",
-      ExpressionAttributeNames: { "#s": "status" },
+        "SET #s = :s, #p = :p, #r = :r, updated_at = :u, finished_at = :f",
+      ExpressionAttributeNames: {
+        "#s": "status",
+        "#p": "progress",
+        "#r": "result",
+      },
       ExpressionAttributeValues: {
         ":s": "done",
         ":p": { stage: "done", pct: 100 },
