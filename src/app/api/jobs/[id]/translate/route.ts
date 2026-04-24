@@ -79,38 +79,46 @@ export async function POST(
 
   async function runTranslations(): Promise<Partial<Record<Language, string>>> {
     await setStatus(id, "translating", { stage: "translating", pct: 50 });
-    const out: Partial<Record<Language, string>> = {
+    const existing: Partial<Record<Language, string>> = {
       ...(job!.result?.translations || {}),
     };
-    for (const lang of langs) {
-      const translated = await translate(englishText, lang);
-      out[lang] = translated;
-      if (lecture_id) {
-        await putLecture(lecture_id, lang, translated, {
-          metadata: {
-            ...(job!.request.metadata || {}),
-            transcription_provider: job!.result?.metadata.transcription_provider,
-            translation_model: CLAUDE_MODEL,
-          },
-          source_job_id: id,
-        });
 
-        // Mirror to OpenSearch nrs-lectures-auto-transcribe if the original
-        // job was indexed (or always, if we always want search parity).
-        if (job!.request.index) {
-          await upsertLectureDoc({
-            lecture_id,
-            lang,
-            text: translated,
-            metadata: job!.request.metadata,
-            transcription_provider: job!.result?.metadata.transcription_provider,
-            translation_model: CLAUDE_MODEL,
+    // Translate + persist all languages IN PARALLEL so total wall-clock =
+    // max(per-lang time), not sum. Critical on Hobby plan (300s function cap).
+    const per = await Promise.all(
+      langs.map(async (lang) => {
+        const translated = await translate(englishText, lang);
+        if (lecture_id) {
+          await putLecture(lecture_id, lang, translated, {
+            metadata: {
+              ...(job!.request.metadata || {}),
+              transcription_provider: job!.result?.metadata.transcription_provider,
+              translation_model: CLAUDE_MODEL,
+            },
             source_job_id: id,
           });
+
+          // Mirror to OpenSearch nrs-lectures-auto-transcribe if the original
+          // job was indexed.
+          if (job!.request.index) {
+            await upsertLectureDoc({
+              lecture_id,
+              lang,
+              text: translated,
+              metadata: job!.request.metadata,
+              transcription_provider: job!.result?.metadata.transcription_provider,
+              translation_model: CLAUDE_MODEL,
+              source_job_id: id,
+            });
+          }
         }
-      }
-    }
-    // Update job result with combined translations
+        return [lang, translated] as const;
+      })
+    );
+
+    const out: Partial<Record<Language, string>> = { ...existing };
+    for (const [lang, text] of per) out[lang] = text;
+
     await setResult(id, {
       ...job!.result!,
       translations: out,
