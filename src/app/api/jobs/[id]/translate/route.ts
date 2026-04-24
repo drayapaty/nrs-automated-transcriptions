@@ -22,7 +22,6 @@ import { waitUntil } from "@vercel/functions";
 import { requireAuth } from "@/lib/auth";
 import { getJob, setStatus, setResult } from "@/lib/jobs";
 import { translate } from "@/lib/pipeline/translate";
-import { upsertLectureDoc } from "@/lib/pipeline/index-lectures";
 import { putLecture } from "@/lib/lectures";
 import { CLAUDE_MODEL } from "@/lib/clients";
 import type { Language } from "@/lib/types";
@@ -97,20 +96,6 @@ export async function POST(
             },
             source_job_id: id,
           });
-
-          // Mirror to OpenSearch nrs-lectures-auto-transcribe if the original
-          // job was indexed.
-          if (job!.request.index) {
-            await upsertLectureDoc({
-              lecture_id,
-              lang,
-              text: translated,
-              metadata: job!.request.metadata,
-              transcription_provider: job!.result?.metadata.transcription_provider,
-              translation_model: CLAUDE_MODEL,
-              source_job_id: id,
-            });
-          }
         }
         return [lang, translated] as const;
       })
