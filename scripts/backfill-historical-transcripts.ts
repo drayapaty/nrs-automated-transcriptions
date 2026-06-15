@@ -67,6 +67,28 @@ const SOURCE_DIR = path.resolve(
   "../../ask-niranjana-swami/content/transcripts"
 );
 
+// Persistent skiplist: lectures the corpus owner never wants indexed.
+// Authoritative copy lives in ask-niranjana-swami (so both writers share
+// the same list). Honored by ask-niranjana-swami's ingest-elasticsearch.ts
+// AND this backfill.
+const SKIPLIST_PATH = path.resolve(
+  __dirname,
+  "../../ask-niranjana-swami/scripts/lib/transcript-skiplist.txt"
+);
+function loadSkipList(): Set<string> {
+  const set = new Set<string>();
+  if (!fs.existsSync(SKIPLIST_PATH)) return set;
+  for (const line of fs.readFileSync(SKIPLIST_PATH, "utf-8").split("\n")) {
+    const u = line.split("#")[0].trim();
+    if (u) set.add(u);
+  }
+  return set;
+}
+const SKIPLIST = loadSkipList();
+if (SKIPLIST.size > 0) {
+  console.log(`Skiplist: ${SKIPLIST.size} UUIDs will be ignored (${SKIPLIST_PATH})`);
+}
+
 interface Meta {
   uuid: string;
   title?: string;
@@ -117,6 +139,7 @@ function discoverEntries(): Entry[] {
     }
 
     if (UUID_ALLOWLIST && !UUID_ALLOWLIST.has(uuid)) continue;
+    if (SKIPLIST.has(uuid)) continue;
     if (YEAR_FILTER && String(meta.year) !== YEAR_FILTER) continue;
     entries.push({ uuid, txtPath, meta });
   }

@@ -353,6 +353,15 @@ The companion batch scripts in `ask-niranjana-swami` call this with
 `--uuid` at end-of-pipeline so every new batch lands in the
 whole-transcript store automatically.
 
+### Skiplist
+
+Both writers (this backfill and ask-niranjana-swami's chunked indexer)
+honor `../ask-niranjana-swami/scripts/lib/transcript-skiplist.txt` —
+UUIDs listed there are never written to either index, even when
+requested explicitly via `--uuid`. Used for content the corpus owner
+chooses to exclude (e.g., japa-only sessions with no teaching content).
+Format: one UUID per line, `#` comments allowed.
+
 ---
 
 ## What this service does NOT touch
