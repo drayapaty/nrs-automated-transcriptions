@@ -327,6 +327,32 @@ Doc IDs are deterministic so re-runs are idempotent:
 - `nrs-lectures-auto-transcribe`: `{lecture_id}_{lang}`
 - `ask-nrs-lectures`: `{uuid}_chunk_{index}`
 
+### Backfill from on-disk transcripts
+
+For lectures transcribed outside this service (e.g., via the batch scripts
+in `ask-niranjana-swami/scripts/batch-*.sh`), use
+`scripts/backfill-historical-transcripts.ts` to populate
+`nrs-lectures-auto-transcribe` from `../ask-niranjana-swami/content/transcripts/`.
+
+```
+# All on-disk transcripts (idempotent — safe to re-run)
+npx tsx scripts/backfill-historical-transcripts.ts
+
+# Just one year
+npx tsx scripts/backfill-historical-transcripts.ts --year 2025
+
+# Just specific UUIDs (added 2026-06-15 so batch scripts can chain
+# surgically without re-scanning 2,600+ transcripts)
+npx tsx scripts/backfill-historical-transcripts.ts --uuid a,b,c
+
+# Plan only
+npx tsx scripts/backfill-historical-transcripts.ts --dry-run
+```
+
+The companion batch scripts in `ask-niranjana-swami` call this with
+`--uuid` at end-of-pipeline so every new batch lands in the
+whole-transcript store automatically.
+
 ---
 
 ## What this service does NOT touch

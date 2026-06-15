@@ -17,6 +17,7 @@
  *   npx tsx scripts/backfill-historical-transcripts.ts
  *   npx tsx scripts/backfill-historical-transcripts.ts --limit 10    # test with 10
  *   npx tsx scripts/backfill-historical-transcripts.ts --year 2025   # only 2025
+ *   npx tsx scripts/backfill-historical-transcripts.ts --uuid a,b,c  # only these UUIDs
  *   npx tsx scripts/backfill-historical-transcripts.ts --dry-run     # just count/preview
  *   npx tsx scripts/backfill-historical-transcripts.ts --concurrency 20
  */
@@ -47,6 +48,17 @@ const DRY_RUN = flags["dry-run"] === "true";
 const LIMIT = flags.limit ? parseInt(flags.limit) : undefined;
 const YEAR_FILTER = flags.year;
 const CONCURRENCY = parseInt(flags.concurrency || "10");
+// --uuid <a,b,c> — comma-separated allowlist; precedes year/limit.
+// Lets batch transcription pipelines surgically backfill just-produced
+// lectures instead of re-scanning the whole corpus.
+const UUID_ALLOWLIST = flags.uuid
+  ? new Set(
+      flags.uuid
+        .split(",")
+        .map((u) => u.trim())
+        .filter(Boolean)
+    )
+  : null;
 
 // ---- Source dir ----
 // Resolve relative to this script's project dir so it works from anywhere
@@ -104,6 +116,7 @@ function discoverEntries(): Entry[] {
       }
     }
 
+    if (UUID_ALLOWLIST && !UUID_ALLOWLIST.has(uuid)) continue;
     if (YEAR_FILTER && String(meta.year) !== YEAR_FILTER) continue;
     entries.push({ uuid, txtPath, meta });
   }
