@@ -114,6 +114,56 @@ function extractYtId(input: string): string | null {
   return m ? m[1] : null;
 }
 
+/**
+ * cobalt.tools public API fallback. Free, no auth. Public instance URL is
+ * env-overridable because the hosted instance has moved a few times.
+ * Returns just the direct stream URL on success — title/duration come
+ * from a separate oEmbed call.
+ */
+async function resolveYtViaCobalt(
+  videoId: string
+): Promise<{ audio_url: string; title: string } | null> {
+  const instance = process.env.COBALT_API_URL || "https://api.cobalt.tools/";
+  const apiUrl = instance.replace(/\/+$/, "") + "/api/json";
+  try {
+    const r = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        isAudioOnly: true,
+        aFormat: "mp3",
+        filenamePattern: "basic",
+      }),
+    });
+    if (!r.ok) return null;
+    const data = (await r.json()) as {
+      status?: string;
+      url?: string;
+      text?: string;
+    };
+    if ((data.status === "stream" || data.status === "redirect") && data.url) {
+      // oEmbed for title
+      let title = `YouTube ${videoId}`;
+      try {
+        const oe = await fetch(
+          `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+        );
+        if (oe.ok) {
+          const meta = (await oe.json()) as { title?: string };
+          if (meta.title) title = meta.title;
+        }
+      } catch {
+        /* ignore — title fallback is fine */
+      }
+      return { audio_url: data.url, title };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveYt(
   sourceLink: string
 ): Promise<ResolvedSource | ResolverError> {
@@ -126,49 +176,70 @@ export async function resolveYt(
     };
   }
 
-  let info: Awaited<ReturnType<typeof ytdl.getInfo>>;
+  // Primary: @distube/ytdl-core
+  let info: Awaited<ReturnType<typeof ytdl.getInfo>> | null = null;
+  let ytdlError = "";
   try {
     info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return {
-      code: 502,
-      message: `YouTube fetch failed for ${videoId}: ${msg}`,
-    };
+    ytdlError = err instanceof Error ? err.message : String(err);
+    console.warn(`[resolveYt] ytdl-core failed for ${videoId}: ${ytdlError}`);
   }
 
-  // Pick the best audio-only format. ytdl annotates formats with hasAudio /
-  // hasVideo / audioBitrate. Sort by bitrate desc and take the top.
-  const audioOnly = info.formats
-    .filter((f) => f.hasAudio && !f.hasVideo && f.url)
-    .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0));
-  const chosen = audioOnly[0] ?? info.formats.find((f) => f.hasAudio && f.url);
-  if (!chosen || !chosen.url) {
-    return {
-      code: 502,
-      message: `No playable audio format on YouTube video ${videoId}`,
-    };
+  if (info) {
+    // Pick the best audio-only format. ytdl annotates formats with hasAudio /
+    // hasVideo / audioBitrate. Sort by bitrate desc and take the top.
+    const audioOnly = info.formats
+      .filter((f) => f.hasAudio && !f.hasVideo && f.url)
+      .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0));
+    const chosen =
+      audioOnly[0] ?? info.formats.find((f) => f.hasAudio && f.url);
+    if (chosen?.url) {
+      const v = info.videoDetails;
+      const publishDate = v.publishDate || v.uploadDate || "";
+      const isoDate = publishDate ? `${publishDate}T00:00:00.000Z` : "";
+      const year = publishDate
+        ? parseInt(publishDate.substring(0, 4), 10)
+        : undefined;
+      const lengthSec = parseInt(v.lengthSeconds || "0", 10);
+      const duration = lengthSec
+        ? new Date(lengthSec * 1000).toISOString().substring(11, 19)
+        : "";
+      return {
+        audio_url: chosen.url,
+        metadata: {
+          uuid: `yt-${videoId}`,
+          title: v.title || `YouTube ${videoId}`,
+          date: isoDate,
+          year: Number.isFinite(year) ? (year as number) : undefined,
+          duration,
+          source_type: "lecture",
+        },
+      };
+    }
   }
 
-  const v = info.videoDetails;
-  const publishDate = v.publishDate || v.uploadDate || "";
-  const isoDate = publishDate ? `${publishDate}T00:00:00.000Z` : "";
-  const year = publishDate ? parseInt(publishDate.substring(0, 4), 10) : undefined;
-  const lengthSec = parseInt(v.lengthSeconds || "0", 10);
-  const duration = lengthSec
-    ? new Date(lengthSec * 1000).toISOString().substring(11, 19)
-    : "";
+  // Fallback: cobalt.tools public API
+  console.warn(`[resolveYt] falling back to cobalt for ${videoId}`);
+  const cobalt = await resolveYtViaCobalt(videoId);
+  if (cobalt) {
+    return {
+      audio_url: cobalt.audio_url,
+      metadata: {
+        uuid: `yt-${videoId}`,
+        title: cobalt.title,
+        date: "",
+        duration: "",
+        source_type: "lecture",
+      },
+    };
+  }
 
   return {
-    audio_url: chosen.url,
-    metadata: {
-      uuid: `yt-${videoId}`,
-      title: v.title || `YouTube ${videoId}`,
-      date: isoDate,
-      year: Number.isFinite(year) ? (year as number) : undefined,
-      duration,
-      source_type: "lecture",
-    },
+    code: 502,
+    message: `YouTube fetch failed for ${videoId}. ytdl-core: ${
+      ytdlError || "no audio format"
+    }. cobalt.tools fallback also failed. Try again later or use a different video.`,
   };
 }
 
