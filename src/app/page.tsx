@@ -262,6 +262,13 @@ export default function Home() {
                     <div className="job-actions">
                       <a
                         className="download-link"
+                        href={`/api/ui/job/${s.job_id}/download?format=pdf`}
+                        download
+                      >
+                        ⤓ PDF
+                      </a>
+                      <a
+                        className="download-link"
                         href={`/api/ui/job/${s.job_id}/download?format=md`}
                         download
                       >

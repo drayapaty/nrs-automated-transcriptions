@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import type { Job } from "@/lib/types";
+import { transcriptToPdfBuffer } from "@/lib/pdf";
 
 function safeFileName(input: string, fallback: string): string {
   const base = (input || "")
@@ -53,9 +54,9 @@ export async function GET(
   }
 
   const format = (req.nextUrl.searchParams.get("format") || "md").toLowerCase();
-  if (format !== "md" && format !== "txt") {
+  if (format !== "md" && format !== "txt" && format !== "pdf") {
     return NextResponse.json(
-      { error: "format must be md or txt" },
+      { error: "format must be md, txt, or pdf" },
       { status: 400 }
     );
   }
@@ -80,6 +81,19 @@ export async function GET(
 
   const titleForName = job.request.metadata?.title || "";
   const baseName = safeFileName(titleForName, id);
+
+  if (format === "pdf") {
+    const pdfBuffer = await transcriptToPdfBuffer(job);
+    return new NextResponse(new Uint8Array(pdfBuffer), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename="${baseName}.pdf"`,
+        "Cache-Control": "private, no-cache",
+      },
+    });
+  }
+
   const body =
     format === "md" ? formatMarkdown(job) : job.result.transcript_en.trim() + "\n";
   const contentType =
