@@ -46,3 +46,6 @@ yarn-error.log*
 # IDE
 .vscode/
 .idea/
+
+# ytdl-core cache
+*-player-script.js
