@@ -193,7 +193,7 @@ export default function Home() {
                 onChange={(e) => setSource(e.target.value as "nrs" | "yt")}
               >
                 <option value="nrs">NRS lecture</option>
-                <option value="yt">YouTube (soon)</option>
+                <option value="yt">YouTube</option>
               </select>
             </div>
             <div className="field">
@@ -207,7 +207,7 @@ export default function Home() {
                 placeholder={
                   source === "nrs"
                     ? "https://niranjanaswami.net/media/lectures/<uuid>  or  <uuid>"
-                    : "https://www.youtube.com/watch?v=…"
+                    : "https://www.youtube.com/watch?v=…  or  https://youtu.be/…  or  11-char video id"
                 }
                 disabled={submitting}
                 autoComplete="off"

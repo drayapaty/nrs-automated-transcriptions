@@ -5,9 +5,13 @@
  * shape /api/jobs expects: a downloadable audio URL + optional metadata
  * that the pipeline can stamp onto the resulting transcript.
  *
- * v0 supports NRS only. YT is stubbed pending a yt-dlp / ytdl-core
- * integration on the serverless edge.
+ * NRS: hits backend.niranjanaswami.net for a presigned S3 URL.
+ * YT : @distube/ytdl-core extracts the direct googlevideo.com audio URL
+ *      so the existing pipeline can stream from it without any S3
+ *      round-trip.
  */
+
+import ytdl from "@distube/ytdl-core";
 
 const NRS_API_DETAIL = "https://backend.niranjanaswami.net/api/Lecture";
 
@@ -100,13 +104,71 @@ export async function resolveNrs(
   };
 }
 
+const YT_ID_RE =
+  /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+
+function extractYtId(input: string): string | null {
+  // Plain 11-char ID (no URL) — accept directly.
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input.trim())) return input.trim();
+  const m = YT_ID_RE.exec(input);
+  return m ? m[1] : null;
+}
+
 export async function resolveYt(
-  _sourceLink: string
+  sourceLink: string
 ): Promise<ResolvedSource | ResolverError> {
+  const videoId = extractYtId(sourceLink);
+  if (!videoId) {
+    return {
+      code: 400,
+      message:
+        "Could not extract a YouTube video ID from source_link. Expected a YouTube URL or bare 11-char video ID.",
+    };
+  }
+
+  let info: Awaited<ReturnType<typeof ytdl.getInfo>>;
+  try {
+    info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      code: 502,
+      message: `YouTube fetch failed for ${videoId}: ${msg}`,
+    };
+  }
+
+  // Pick the best audio-only format. ytdl annotates formats with hasAudio /
+  // hasVideo / audioBitrate. Sort by bitrate desc and take the top.
+  const audioOnly = info.formats
+    .filter((f) => f.hasAudio && !f.hasVideo && f.url)
+    .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0));
+  const chosen = audioOnly[0] ?? info.formats.find((f) => f.hasAudio && f.url);
+  if (!chosen || !chosen.url) {
+    return {
+      code: 502,
+      message: `No playable audio format on YouTube video ${videoId}`,
+    };
+  }
+
+  const v = info.videoDetails;
+  const publishDate = v.publishDate || v.uploadDate || "";
+  const isoDate = publishDate ? `${publishDate}T00:00:00.000Z` : "";
+  const year = publishDate ? parseInt(publishDate.substring(0, 4), 10) : undefined;
+  const lengthSec = parseInt(v.lengthSeconds || "0", 10);
+  const duration = lengthSec
+    ? new Date(lengthSec * 1000).toISOString().substring(11, 19)
+    : "";
+
   return {
-    code: 400,
-    message:
-      "YouTube source not yet supported. Use source=nrs with an NRS lecture URL or UUID. (Tracking in next iteration.)",
+    audio_url: chosen.url,
+    metadata: {
+      uuid: `yt-${videoId}`,
+      title: v.title || `YouTube ${videoId}`,
+      date: isoDate,
+      year: Number.isFinite(year) ? (year as number) : undefined,
+      duration,
+      source_type: "lecture",
+    },
   };
 }
 
