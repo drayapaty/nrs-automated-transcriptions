@@ -71,14 +71,20 @@ function fmtAge(iso?: string): string {
 export default function Home() {
   const [source, setSource] = useState<"nrs" | "yt">("nrs");
   const [link, setLink] = useState("");
+  const [notifyEmail, setNotifyEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stored, setStored] = useState<StoredJob[]>([]);
   const [jobs, setJobs] = useState<Record<string, JobRecord>>({});
 
-  // Load history on first paint.
+  // Load history + remember last-used email on first paint.
   useEffect(() => {
     setStored(loadStored());
+    const lastEmail =
+      typeof window !== "undefined"
+        ? localStorage.getItem("nrs-transcribe-notify-email") || ""
+        : "";
+    if (lastEmail) setNotifyEmail(lastEmail);
   }, []);
 
   // Poll every job that isn't done/failed.
@@ -120,10 +126,18 @@ export default function Home() {
     }
     setSubmitting(true);
     try {
+      const trimmedEmail = notifyEmail.trim();
+      if (trimmedEmail && typeof window !== "undefined") {
+        localStorage.setItem("nrs-transcribe-notify-email", trimmedEmail);
+      }
       const res = await fetch("/api/ui/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source, source_link: link.trim() }),
+        body: JSON.stringify({
+          source,
+          source_link: link.trim(),
+          ...(trimmedEmail ? { notify_email: trimmedEmail } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -201,6 +215,19 @@ export default function Home() {
             </div>
           </div>
           <div className="field">
+            <label htmlFor="notifyEmail">Notify when done (optional)</label>
+            <input
+              id="notifyEmail"
+              className="input"
+              type="email"
+              value={notifyEmail}
+              onChange={(e) => setNotifyEmail(e.target.value)}
+              placeholder="you@example.com"
+              disabled={submitting}
+              autoComplete="email"
+            />
+          </div>
+          <div className="field">
             <button type="submit" className="btn btn-block" disabled={submitting}>
               {submitting ? <span className="spinner" /> : null}
               {submitting ? "Submitting…" : "Submit"}
@@ -231,6 +258,24 @@ export default function Home() {
                     <span>{stage} · {pct}%</span>
                   </div>
                   <div className="progress"><div style={{ width: `${pct}%` }} /></div>
+                  {status === "done" && (
+                    <div className="job-actions">
+                      <a
+                        className="download-link"
+                        href={`/api/ui/job/${s.job_id}/download?format=md`}
+                        download
+                      >
+                        ⤓ Markdown
+                      </a>
+                      <a
+                        className="download-link"
+                        href={`/api/ui/job/${s.job_id}/download?format=txt`}
+                        download
+                      >
+                        ⤓ Plain text
+                      </a>
+                    </div>
+                  )}
                   {j?.error && <div className="error" style={{ marginTop: 8 }}>{j.error}</div>}
                 </div>
               );

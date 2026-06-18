@@ -196,6 +196,32 @@ button, input, select, textarea { font: inherit; color: inherit; }
   transition: width 240ms ease;
 }
 
+.job-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--bg-soft);
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.download-link:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  text-decoration: none;
+}
+
 .empty {
   text-align: center;
   color: var(--text-faint);

@@ -54,6 +54,8 @@ export interface CreateJobRequest {
   paragraph?: boolean;
   /** Optional. If set, POST job result to this URL when done. */
   callback_url?: string;
+  /** Optional. If set, email the completed transcript to this address via SES. */
+  notify_email?: string;
   /** Optional override of which transcription provider to use. */
   provider?: "auto" | "deepgram" | "groq";
 }

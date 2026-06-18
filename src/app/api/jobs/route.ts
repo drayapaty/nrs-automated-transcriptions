@@ -70,6 +70,7 @@ const Body = z
     metadata: IndexMetadataSchema.optional(),
     paragraph: z.boolean().optional(),
     callback_url: z.string().url().optional(),
+    notify_email: z.string().email().optional(),
     provider: z.enum(["auto", "deepgram", "groq"]).optional(),
   })
   .refine((b) => !b.index || !!b.metadata?.uuid, {

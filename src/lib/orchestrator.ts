@@ -18,6 +18,7 @@ import { transcribe } from "./pipeline/transcribe";
 import { cleanupTranscript } from "./pipeline/cleanup";
 import { translate } from "./pipeline/translate";
 import { indexTranscript } from "./pipeline/index-opensearch";
+import { sendCompletionEmail, sendFailureEmail } from "./email";
 import { CLAUDE_MODEL } from "./clients";
 
 function wordsOf(text: string): number {
@@ -153,6 +154,18 @@ export async function runPipeline(job: Job): Promise<void> {
         result,
       });
     }
+    if (req.notify_email) {
+      const finalJob: Job = {
+        ...job,
+        status: "done",
+        result,
+        finished_at: new Date().toISOString(),
+      };
+      const r = await sendCompletionEmail(req.notify_email, finalJob);
+      if (!r.sent) {
+        console.warn(`[orchestrator] notify email skipped: ${r.reason}`);
+      }
+    }
   } catch (err) {
     const msg = (err as Error).message || String(err);
     console.error(`[orchestrator] job ${job_id} failed: ${msg}`);
@@ -163,6 +176,9 @@ export async function runPipeline(job: Job): Promise<void> {
         status: "failed",
         error: msg,
       });
+    }
+    if (req.notify_email) {
+      await sendFailureEmail(req.notify_email, job, msg);
     }
   }
 }
