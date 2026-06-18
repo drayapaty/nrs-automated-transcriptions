@@ -1,6 +1,8 @@
+import "./globals.css";
+
 export const metadata = {
-  title: "NRS Automated Transcriptions",
-  description: "Transcription + translation + indexing service",
+  title: "Transcribe — Niranjana Swami",
+  description: "Submit a lecture for transcription",
 };
 
 export default function RootLayout({
@@ -10,6 +12,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@400;500;600&display=swap"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );
