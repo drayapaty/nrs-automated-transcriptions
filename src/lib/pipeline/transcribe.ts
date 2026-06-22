@@ -23,27 +23,26 @@ const SANSKRIT_PROMPT =
   "acarya, Narada Muni, Vyasadeva, Sukadeva Gosvami, Maharaja Pariksit, Naimisaranya, " +
   "Haridas Thakur, Rupa Gosvami, Sanatana Gosvami, Niranjana Swami, Prabhupada said";
 
-// Deepgram Nova-3 KEYTERM PROMPTING — boosts recognition of these exact terms
-// (proper nouns + Gaudiya vocabulary) in the PRIMARY Deepgram path. Previously
-// SANSKRIT_PROMPT only fed the Groq fallback, so Deepgram guessed Sanskrit
-// names blind (e.g. heard "Dina Gauranga das" as "Dina Varangvadas"). Nova-3
-// accepts up to 100 keyterms; one repeated `keyterm=` param per term.
-const KEYTERMS: string[] = Array.from(
-  new Set(
-    [
-      ...SANSKRIT_PROMPT.split(",").map((s) => s.trim()),
-      // Gaudiya parampara names + terms users/Maharaja actually speak in feedback
-      "Gauranga", "Gaura", "Caitanya", "Mahaprabhu", "Gaudiya", "Vaishnava", "Vaisnava",
-      "Harinama", "harinama ruci", "nama", "japa", "kirtana", "arcana", "seva",
-      "Bhaktisiddhanta Sarasvati", "Bhaktivinoda Thakura", "Visvanatha Cakravarti",
-      "Baladeva Vidyabhusana", "Jiva Gosvami", "Raghunatha dasa Gosvami",
-      "Krsnadasa Kaviraja", "Narottama dasa Thakura", "Bhagavatam", "Gita",
-      "prabhu", "Maharaja", "dasa", "devi dasi", "guru-parampara", "sampradaya",
-    ]
-      .map((s) => s.trim())
-      .filter((s) => s && s.toLowerCase() !== "prabhupada said"),
-  ),
-).slice(0, 100);
+// Deepgram Nova-3 KEYTERM PROMPTING — boosts recognition of these terms in the
+// PRIMARY Deepgram path (previously SANSKRIT_PROMPT only fed the Groq fallback,
+// so Deepgram guessed Sanskrit blind: "harinama ruci" -> "Harinam Rooji").
+//
+// DELIBERATELY a small, DISTINCTIVE list of proper nouns + multi-syllable terms.
+// Do NOT add common chant words (Krishna, Hare Krishna, Rama, Hare, guru, bhakti,
+// nama, japa, dharma…): Deepgram already knows them, and boosting high-frequency
+// words makes it HALLUCINATE them — a full 100-term list injected a spurious
+// "Krishna. Hare Krishna. Rama…" chant tail. Verified: this trimmed list keeps
+// "harinama ruci" exact with no hallucinated tail.
+const KEYTERMS: string[] = [
+  "Srila Prabhupada", "Bhaktivedanta Swami", "Srimad Bhagavatam", "Bhagavad-gita",
+  "Caitanya-caritamrita", "Caitanya Mahaprabhu", "Gauranga", "Nityananda",
+  "Bhaktisiddhanta Sarasvati", "Bhaktivinoda Thakura", "Visvanatha Cakravarti",
+  "Baladeva Vidyabhusana", "Jiva Gosvami", "Rupa Gosvami", "Sanatana Gosvami",
+  "Raghunatha dasa Gosvami", "Krsnadasa Kaviraja", "Narottama dasa Thakura",
+  "Niranjana Swami", "harinama ruci", "sankirtana", "prasadam", "arcana",
+  "Vrindavan", "Mayapur", "Gaudiya", "Vaishnava", "sampradaya", "parampara",
+  "Damodarastaka", "Siksastakam",
+];
 
 // Repeated `keyterm=` params, each term URL-encoded (spaces preserved as %20 so
 // multi-word phrases stay one term).
