@@ -23,6 +23,32 @@ const SANSKRIT_PROMPT =
   "acarya, Narada Muni, Vyasadeva, Sukadeva Gosvami, Maharaja Pariksit, Naimisaranya, " +
   "Haridas Thakur, Rupa Gosvami, Sanatana Gosvami, Niranjana Swami, Prabhupada said";
 
+// Deepgram Nova-3 KEYTERM PROMPTING — boosts recognition of these exact terms
+// (proper nouns + Gaudiya vocabulary) in the PRIMARY Deepgram path. Previously
+// SANSKRIT_PROMPT only fed the Groq fallback, so Deepgram guessed Sanskrit
+// names blind (e.g. heard "Dina Gauranga das" as "Dina Varangvadas"). Nova-3
+// accepts up to 100 keyterms; one repeated `keyterm=` param per term.
+const KEYTERMS: string[] = Array.from(
+  new Set(
+    [
+      ...SANSKRIT_PROMPT.split(",").map((s) => s.trim()),
+      // Gaudiya parampara names + terms users/Maharaja actually speak in feedback
+      "Gauranga", "Gaura", "Caitanya", "Mahaprabhu", "Gaudiya", "Vaishnava", "Vaisnava",
+      "Harinama", "harinama ruci", "nama", "japa", "kirtana", "arcana", "seva",
+      "Bhaktisiddhanta Sarasvati", "Bhaktivinoda Thakura", "Visvanatha Cakravarti",
+      "Baladeva Vidyabhusana", "Jiva Gosvami", "Raghunatha dasa Gosvami",
+      "Krsnadasa Kaviraja", "Narottama dasa Thakura", "Bhagavatam", "Gita",
+      "prabhu", "Maharaja", "dasa", "devi dasi", "guru-parampara", "sampradaya",
+    ]
+      .map((s) => s.trim())
+      .filter((s) => s && s.toLowerCase() !== "prabhupada said"),
+  ),
+).slice(0, 100);
+
+// Repeated `keyterm=` params, each term URL-encoded (spaces preserved as %20 so
+// multi-word phrases stay one term).
+const KEYTERM_QS = KEYTERMS.map((t) => `keyterm=${encodeURIComponent(t)}`).join("&");
+
 export interface TranscriptionResult {
   text: string;
   provider: "deepgram" | "groq";
@@ -49,7 +75,8 @@ export async function transcribeWithDeepgramUrl(
     try {
       const res = await fetch(
         "https://api.deepgram.com/v1/listen?model=nova-3&language=en" +
-          "&punctuate=true&paragraphs=true&smart_format=true",
+          "&punctuate=true&paragraphs=true&smart_format=true" +
+          (KEYTERM_QS ? `&${KEYTERM_QS}` : ""),
         {
           method: "POST",
           headers: {
