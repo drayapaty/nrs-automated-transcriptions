@@ -17,7 +17,21 @@ import { authConfig } from "@/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_PREFIXES = ["/signin", "/api/auth", "/api/health", "/api/debug-auth"];
+// Public = user not required to have a session cookie. The session-gated
+// surface is the admin UI itself (`/`, `/api/ui/*`). The "worker" APIs
+// below are protected by `ADMIN_BEARER_TOKEN` and are called both by
+// the user-facing proxy routes (server-to-server, no cookie) and by
+// background jobs. They MUST stay accessible without a session cookie
+// or the proxy chain returns 401 to the browser.
+const PUBLIC_PREFIXES = [
+  "/signin",
+  "/api/auth",
+  "/api/health",
+  "/api/debug-auth",
+  "/api/transcribe",
+  "/api/jobs",
+  "/api/lectures",
+];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(
