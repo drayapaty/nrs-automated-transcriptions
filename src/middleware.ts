@@ -27,6 +27,14 @@ function isPublic(pathname: string): boolean {
 
 const handler = auth((req) => {
   const { pathname } = req.nextUrl;
+  // TEMP DEBUG — remove after auth issue resolved
+  const cookieNames = req.cookies.getAll().map((c) => c.name);
+  const hasSessionCookie = cookieNames.some((n) =>
+    n.endsWith("authjs.session-token")
+  );
+  console.log(
+    `[mw] ${req.method} ${pathname} auth=${!!req.auth} hasCookie=${hasSessionCookie} cookies=${cookieNames.join(",")}`
+  );
   if (isPublic(pathname)) return NextResponse.next();
   if (req.auth) return NextResponse.next();
   if (pathname.startsWith("/api/")) {
