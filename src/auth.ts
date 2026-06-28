@@ -97,7 +97,11 @@ If you did not request this, you can ignore this email.
 `;
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+// NextAuth v5 lazy-config form. Passing a function (instead of an object)
+// defers config construction to the first request — so build-time static
+// analysis ("Collecting page data") doesn't try to instantiate the
+// DynamoDB adapter (which needs env vars not present during build).
+export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
   ...baseConfig,
   adapter: DynamoDBAdapter(dynamo(), {
     tableName: process.env.AUTH_DYNAMODB_TABLE || "nrs-auth",
@@ -157,4 +161,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
-});
+}));
