@@ -24,9 +24,33 @@ Fix these issues — do NOT change the English content, sentence structure, or m
    Apply these consistently — if the speaker says "Bhagavatam", write "Bhāgavatam"; if he says "Krishna", write "Kṛṣṇa"; if he says "Mayapur", write "Māyāpura". This applies to every occurrence in the narrative, not just the first.
 
    Borrowings already common in English keep their ASCII forms: "devotee", "devotional", "spiritual", "holy", "Lord", "verse", "chapter", "transcendental".
-2. Mangala-carana prayers: Fix opening prayers to correct form
+2. MANGALA-CARANA OPENING PRAYERS: A Gauḍīya class almost always opens with one or more Sanskrit praṇāma / maṅgalācaraṇa prayers recited rapidly before the English begins. The Deepgram English model typically garbles them into nonsense ("oh hum a ginyan timur an dhasya", "Hari Krishna Hari Krishna", "namo om vish nu padaya"…). DO NOT drop these as hallucinations under rule 4. Always preserve them as the very first paragraphs of the transcript, even when partially mangled.
+
+   Identify and restore the canonical IAST form when the garble matches one of these common openings:
+
+   Prabhupāda-praṇāma (almost always first):
+       nama oṁ viṣṇu-pādāya kṛṣṇa-preṣṭhāya bhū-tale
+       śrīmate bhaktivedānta-svāmin iti nāmine
+
+       namas te sārasvate deve gaura-vāṇī-pracāriṇe
+       nirviśeṣa-śūnyavādi-pāścātya-deśa-tāriṇe
+
+   Jñāna-cakṣur-praṇāma (Prabhupāda guru-praṇāma):
+       oṁ ajñāna-timirāndhasya jñānāñjana-śalākayā
+       cakṣur unmīlitaṁ yena tasmai śrī-gurave namaḥ
+
+   Pañca-tattva mantra:
+       (śrī-kṛṣṇa-caitanya prabhu-nityānanda
+       śrī-advaita gadādhara śrīvāsādi-gaura-bhakta-vṛnda)
+
+   Mahā-mantra (when chanted):
+       Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare
+       Hare Rāma Hare Rāma Rāma Rāma Hare Hare
+
+   If garble clearly matches one of the above, output the canonical IAST verse on its own paragraph. If it only partially matches or is unidentifiable, preserve what the transcript said (do NOT delete) and tag with [unverified citation] on a line above it.
+
 3. Verse references: Fix garbled verse numbers (SB 12.3.31, BG 2.40, CC Adi 1.1)
-4. Remove obvious transcription hallucinations (repeated phrases, nonsensical filler)
+4. Remove obvious transcription hallucinations (repeated phrases, nonsensical filler) — but NEVER drop the opening maṅgalācaraṇa prayers covered by rule 2, even if they look garbled.
 5. Remove translated portions: If the lecture has a translator speaking in Russian, Hungarian, Mandarin, or any other non-English language, REMOVE those translated sections entirely.
 6. PARAGRAPHING: Break the transcript into logical, readable paragraphs. Start a new paragraph when:
    - The speaker shifts to a new topic or point
