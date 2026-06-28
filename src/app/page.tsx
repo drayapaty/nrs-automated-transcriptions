@@ -99,7 +99,6 @@ export default function Home() {
   const [link, setLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [notifyEmail, setNotifyEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stored, setStored] = useState<StoredJob[]>([]);
@@ -108,14 +107,9 @@ export default function Home() {
   const [copied, setCopied] = useState<string | null>(null);
   const { data: session } = useSession();
 
-  // Load history + remember last-used email on first paint.
+  // Load history on first paint.
   useEffect(() => {
     setStored(loadStored());
-    const lastEmail =
-      typeof window !== "undefined"
-        ? localStorage.getItem("nrs-transcribe-notify-email") || ""
-        : "";
-    if (lastEmail) setNotifyEmail(lastEmail);
   }, []);
 
   // Poll every job that isn't done/failed.
@@ -151,10 +145,7 @@ export default function Home() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const trimmedEmail = notifyEmail.trim();
-    if (trimmedEmail && typeof window !== "undefined") {
-      localStorage.setItem("nrs-transcribe-notify-email", trimmedEmail);
-    }
+    const trimmedEmail = (session?.user?.email || "").trim();
 
     // === UPLOAD MODE — 3-step orchestration ===
     if (source === "upload") {
@@ -372,19 +363,6 @@ export default function Home() {
                 )}
               </div>
             )}
-          </div>
-          <div className="field">
-            <label htmlFor="notifyEmail">Notify when done (optional)</label>
-            <input
-              id="notifyEmail"
-              className="input"
-              type="email"
-              value={notifyEmail}
-              onChange={(e) => setNotifyEmail(e.target.value)}
-              placeholder="you@example.com"
-              disabled={submitting}
-              autoComplete="email"
-            />
           </div>
           <div className="field">
             <button type="submit" className="btn btn-block" disabled={submitting}>
