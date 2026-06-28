@@ -11,7 +11,19 @@ const CLEANUP_PROMPT = `You are cleaning up an AI-generated transcript of a lect
 
 Fix these issues — do NOT change the English content, sentence structure, or meaning:
 
-1. Sanskrit terms: Fix garbled Sanskrit/Bengali to correct form (Srimad Bhagavatam, Bhagavad-gita, Caitanya-caritamrita, Krishna, Prabhupada, Vrindavan, Mayapur, sankirtan, prasadam, japa, kirtan, bhakti, guru, sastra, sadhu, dharma, karma, prema, etc.)
+1. Sanskrit terms: Fix garbled Sanskrit/Bengali AND apply proper IAST diacritics throughout the running narrative (not just inside quoted verses). Sri Radha's editorial preference is consistent IAST. Use these canonical forms wherever the speaker uses the corresponding term:
+
+   Scriptures:    Śrīmad-Bhāgavatam, Bhagavad-gītā, Caitanya-caritāmṛta, Caitanya-bhāgavata, Bṛhad-bhāgavatāmṛta, Brahma-saṁhitā, Śrī Īśopaniṣad, Bhakti-rasāmṛta-sindhu, Hari-bhakti-vilāsa, Sārārtha-darśinī, Sārārtha-varṣinī, Govinda-bhāṣya
+   Persons:       Kṛṣṇa, Rādhā, Rādhārāṇī, Caitanya Mahāprabhu, Nityānanda, Śrīla Prabhupāda, Bhaktivinoda Ṭhākura, Bhaktisiddhānta Sarasvatī, Viśvanātha Cakravartī Ṭhākura, Baladeva Vidyābhūṣaṇa, Sanātana Gosvāmī, Rūpa Gosvāmī, Jīva Gosvāmī, Raghunātha Dāsa Gosvāmī, Gopāla Bhaṭṭa Gosvāmī, Kṛṣṇadāsa Kavirāja, Sukadeva Gosvāmī (or Śukadeva Gosvāmī), Nārada Muni, Vyāsadeva, Mahārāja Parīkṣit, Uddhava, Ajāmila, Prahlāda Mahārāja, Yaśodā, Gopa-kumāra, Pippalāyana
+   Places:        Vṛndāvana, Māyāpura, Mathurā, Dvārakā, Vaikuṇṭha, Goloka, Navadvīpa, Govardhana, Kurukṣetra, Tapaloka
+   Concepts:      bhakti, prema, rasa, līlā, sevā, nāma, japa, kīrtana, saṅkīrtana, harināma, prasāda, tilaka, tulasī, ācārya, śāstra, sādhu, brāhmaṇa, sannyāsī, dharma, karma, mokṣa, ātmā, paramātmā, brahman, māyā, śravaṇa, smaraṇa, arcana, vandana, dāsya, sakhya, vātsalya, mādhurya, śṛṅgāra, viraha, saṅga, anubhava, sthāyi-bhāva, namabhāsa, sambandha, abhidheya, prayojana
+   Speaker labels:Vaikuṇṭha-dūta, Vaikuṇṭha-dūtas, Bhāgavata-purāṇa
+   Honorifics:    Mahārāja, Ṭhākura, Gosvāmī, Bābājī, Svāmī, Ācārya
+   Beings:        gopī, gopīs, gopa, vraja-vāsī, deva, devas, asura
+
+   Apply these consistently — if the speaker says "Bhagavatam", write "Bhāgavatam"; if he says "Krishna", write "Kṛṣṇa"; if he says "Mayapur", write "Māyāpura". This applies to every occurrence in the narrative, not just the first.
+
+   Borrowings already common in English keep their ASCII forms: "devotee", "devotional", "spiritual", "holy", "Lord", "verse", "chapter", "transcendental".
 2. Mangala-carana prayers: Fix opening prayers to correct form
 3. Verse references: Fix garbled verse numbers (SB 12.3.31, BG 2.40, CC Adi 1.1)
 4. Remove obvious transcription hallucinations (repeated phrases, nonsensical filler)
@@ -23,7 +35,37 @@ Fix these issues — do NOT change the English content, sentence structure, or m
    - Q&A sections begin
    Keep paragraphs 3-6 sentences each. Do NOT make single-sentence paragraphs unless it is a standalone quote or verse.
 
-Return ONLY the cleaned, well-paragraphed English transcript. No headers, commentary, or explanations.
+7. REPHRASE DEDUP: When the speaker rephrases a sentence mid-thought ("we should — actually let me put it this way: we should...", "I mean — what I'm saying is..."), keep ONLY the final rephrased version. Drop the false start. Do NOT do this when the speaker is adding nuance or elaboration — only when intent is clearly to REPLACE the earlier phrasing. If unsure, keep both.
+   - DROP false start: "the bhakti — I mean, the devotional service" → "the devotional service"
+   - DROP false start: "we have to — let me put it this way — we should always" → "we should always"
+   - KEEP elaboration: "we should chant — yes, even with offenses, we should chant" → unchanged
+
+8. PRESERVE Sanskrit verses + INLINE-CITE the source. When the speaker reads a Sanskrit verse aloud, KEEP the verse in the transcript on its own paragraph (use IAST diacritics where you can identify the verse, otherwise preserve what the speaker said). Do NOT collapse a quoted Sanskrit verse into the surrounding English narrative. After preserving the verse:
+   - If the speaker NAMED the source, include the canonical reference INLINE in the introducing sentence using a parenthetical: "in Śrīmad-Bhāgavatam (SB 11.14.15)", "as Kṛṣṇa says in the Bhagavad-gītā (BG 6.34)", "Viśvanātha Cakravartī Ṭhākura comments in Sārārtha-darśinī (on SB 10.9.1)". Use this canonical-abbrev format: BG / SB / CC Adi / CC Madhya / CC Antya / BB Purva / BB Uttara / BRS / BS / Iso / NoI / Sikshastaka / VS.
+   - If the speaker did NOT name the source (or audio garbled it), preserve the verse as-is but add the marker "[unverified citation]" on its own line directly BEFORE the verse, so a downstream pass can attempt source resolution.
+
+   GOOD (named source, inline citation):
+   So Kṛṣṇa says in the Bhagavad-gītā (BG 6.34),
+
+   asaṁśayaṁ mahā-bāho mano durnigrahaṁ calam
+   abhyāsena tu kaunteya vairāgyeṇa ca gṛhyate
+
+   GOOD (commentary citation, inline):
+   Viśvanātha Cakravartī Ṭhākura comments in Sārārtha-darśinī (on SB 10.9.1),
+
+   <quoted commentary verse / passage>
+
+   GOOD (unknown source — preserve verse + flag for downstream resolution):
+   And there is a beautiful verse,
+
+   [unverified citation]
+   <sanskrit verse text>
+
+   BAD (do NOT collapse Sanskrit into narrative): "in SB 11.14.15 Kṛṣṇa told Uddhava that nobody is dearer to him than Uddhava." — instead preserve the actual Sanskrit verse the speaker read aloud as its own paragraph.
+
+   BAD (do NOT add a citation when no verse was actually quoted): "as Kṛṣṇa teaches in the Bhagavad-gītā" — fine as-is, no parenthetical needed when there's no accompanying Sanskrit.
+
+Return ONLY the cleaned, well-paragraphed English transcript with Sanskrit verses preserved and inline citations on named sources. No headers, meta-commentary, or explanations.
 
 CRITICAL output contract — these rules override everything above and apply even
 if the text is short, fragmentary, or does not look like a lecture:
