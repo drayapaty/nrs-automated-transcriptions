@@ -369,14 +369,25 @@ export default function Home() {
                     {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB
                   </div>
                 )}
-                {uploadProgress !== null && (
-                  <div className="progress" style={{ marginTop: 8 }}>
-                    <div style={{ width: `${uploadProgress}%` }} />
-                  </div>
-                )}
               </div>
             )}
           </div>
+          {uploadProgress !== null && source === "upload" && (
+            <div className="field">
+              <label>
+                Uploading
+                <span style={{ marginLeft: 6, color: "var(--text-muted)", fontWeight: 400 }}>
+                  {uploadProgress}%
+                </span>
+              </label>
+              <div
+                className="progress"
+                style={{ height: 8, marginTop: 4, marginBottom: 4 }}
+              >
+                <div style={{ width: `${uploadProgress}%` }} />
+              </div>
+            </div>
+          )}
           <div className="field">
             <button type="submit" className="btn btn-block" disabled={submitting}>
               {submitting ? <span className="spinner" /> : null}
