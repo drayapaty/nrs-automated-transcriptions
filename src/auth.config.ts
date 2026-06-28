@@ -16,7 +16,14 @@ export const authConfig = {
     error: "/signin/error",
   },
   providers: [], // edge-safe: providers added in src/auth.ts
-  // No `authorized` callback — auth gating is handled entirely by
-  // src/middleware.ts so we have one path that runs for every request
-  // and uniform 401/redirect behavior across HTTP methods.
+  callbacks: {
+    // Always return true. Gating happens in src/middleware.ts; we still
+    // need this callback so the auth() wrapper populates req.auth for
+    // our custom middleware function. Without it, req.auth was null for
+    // every request and every API call returned 401 even when the user
+    // had a valid session cookie.
+    authorized() {
+      return true;
+    },
+  },
 } satisfies NextAuthConfig;
