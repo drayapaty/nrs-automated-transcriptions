@@ -16,9 +16,7 @@ export const authConfig = {
     error: "/signin/error",
   },
   providers: [], // edge-safe: providers added in src/auth.ts
-  callbacks: {
-    authorized({ auth }) {
-      return !!auth?.user;
-    },
-  },
+  // No `authorized` callback — auth gating is handled entirely by
+  // src/middleware.ts so we have one path that runs for every request
+  // and uniform 401/redirect behavior across HTTP methods.
 } satisfies NextAuthConfig;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 
 type JobStatus =
@@ -105,7 +106,19 @@ export default function Home() {
   const [jobs, setJobs] = useState<Record<string, JobRecord>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const router = useRouter();
+
+  // Client-side guard. The middleware redirects unauthenticated users on
+  // first navigation, but Vercel can serve `/` from the edge cache and
+  // skip middleware re-checks for the body. Without this guard, an
+  // unauthed user with a stale tab can see the form, submit, and get a
+  // confusing 401 from /api/ui/submit. Force them to /signin instead.
+  useEffect(() => {
+    if (sessionStatus === "unauthenticated") {
+      router.replace("/signin?callbackUrl=" + encodeURIComponent("/"));
+    }
+  }, [sessionStatus, router]);
 
   // Load history on first paint.
   useEffect(() => {
