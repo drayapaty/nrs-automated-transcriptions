@@ -111,7 +111,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth(() => ({
     indexPartitionKey: "GSI1PK",
     indexSortKey: "GSI1SK",
   }),
-  session: { strategy: "database" },
+  // JWT session strategy lets the Edge middleware verify sessions without
+  // hitting DynamoDB (database strategy would require a DB lookup per
+  // request and the middleware can't do that). Adapter is still used to
+  // persist users + verification tokens for the magic-link flow.
+  session: { strategy: "jwt" },
   providers: [
     {
       id: "email",
