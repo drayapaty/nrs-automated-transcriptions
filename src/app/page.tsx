@@ -57,6 +57,31 @@ function badgeClass(status: string): string {
   return "badge running";
 }
 
+function stageLabel(stage: string, status: string): string {
+  const s = (stage || status || "").toLowerCase();
+  switch (s) {
+    case "queued":
+      return "Queued — waiting for a worker";
+    case "downloading":
+      return "Downloading audio";
+    case "transcribing":
+      return "Transcribing (Deepgram)";
+    case "cleaning":
+      return "Cleaning Sanskrit + paragraphing (Sonnet)";
+    case "translating":
+      return "Translating";
+    case "indexing":
+      return "Indexing for search";
+    case "done":
+      return "Done";
+    case "failed":
+    case "error":
+      return "Failed";
+    default:
+      return stage || status;
+  }
+}
+
 function fmtAge(iso?: string): string {
   if (!iso) return "";
   const ms = Date.now() - new Date(iso).getTime();
@@ -78,6 +103,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [stored, setStored] = useState<StoredJob[]>([]);
   const [jobs, setJobs] = useState<Record<string, JobRecord>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [copied, setCopied] = useState<string | null>(null);
 
   // Load history + remember last-used email on first paint.
   useEffect(() => {
@@ -261,7 +288,18 @@ export default function Home() {
   function clearHistory() {
     setStored([]);
     setJobs({});
+    setExpanded({});
     saveStored([]);
+  }
+
+  async function copyTranscript(jobId: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(jobId);
+      setTimeout(() => setCopied((c) => (c === jobId ? null : c)), 2000);
+    } catch {
+      setError("Copy failed — your browser blocked clipboard access.");
+    }
   }
 
   return (
@@ -366,41 +404,73 @@ export default function Home() {
               const status = j?.status || "queued";
               const pct = j?.progress?.pct ?? 0;
               const stage = j?.progress?.stage || status;
+              const transcript = j?.result?.transcript_en?.trim() || "";
+              const isExpanded = !!expanded[s.job_id];
               return (
-                <div key={s.job_id} className="job">
+                <div key={s.job_id} className={`job ${status === "done" ? "job-done" : ""}`}>
                   <div className="job-top">
-                    <div className="job-title" title={s.title}>{s.title}</div>
+                    <div className="job-title" title={s.title}>
+                      {status === "done" ? "✓ " : ""}{s.title}
+                    </div>
                     <div className="job-meta">{fmtAge(s.submitted_at)}</div>
                   </div>
                   <div className="job-bottom">
                     <span className={badgeClass(status)}>{status}</span>
-                    <span>{stage} · {pct}%</span>
+                    <span className="stage-label">{stageLabel(stage, status)}{status !== "done" && status !== "failed" ? ` · ${pct}%` : ""}</span>
                   </div>
-                  <div className="progress"><div style={{ width: `${pct}%` }} /></div>
-                  {status === "done" && (
-                    <div className="job-actions">
-                      <a
-                        className="download-link"
-                        href={`/api/ui/job/${s.job_id}/download?format=pdf`}
-                        download
-                      >
-                        ⤓ PDF
-                      </a>
-                      <a
-                        className="download-link"
-                        href={`/api/ui/job/${s.job_id}/download?format=md`}
-                        download
-                      >
-                        ⤓ Markdown
-                      </a>
-                      <a
-                        className="download-link"
-                        href={`/api/ui/job/${s.job_id}/download?format=txt`}
-                        download
-                      >
-                        ⤓ Plain text
-                      </a>
-                    </div>
+                  {status !== "done" && status !== "failed" && (
+                    <div className="progress"><div style={{ width: `${pct}%` }} /></div>
+                  )}
+                  {status === "done" && transcript && (
+                    <>
+                      <div className="job-actions">
+                        <button
+                          type="button"
+                          className="download-link download-link-btn"
+                          onClick={() =>
+                            setExpanded((e) => ({ ...e, [s.job_id]: !isExpanded }))
+                          }
+                          aria-expanded={isExpanded}
+                        >
+                          {isExpanded ? "▾ Hide transcript" : "▸ Read transcript"}
+                        </button>
+                        <button
+                          type="button"
+                          className="download-link download-link-btn"
+                          onClick={() => copyTranscript(s.job_id, transcript)}
+                        >
+                          {copied === s.job_id ? "✓ Copied" : "⎘ Copy"}
+                        </button>
+                        <a
+                          className="download-link"
+                          href={`/api/ui/job/${s.job_id}/download?format=pdf`}
+                          download
+                        >
+                          ⤓ PDF
+                        </a>
+                        <a
+                          className="download-link"
+                          href={`/api/ui/job/${s.job_id}/download?format=md`}
+                          download
+                        >
+                          ⤓ Markdown
+                        </a>
+                        <a
+                          className="download-link"
+                          href={`/api/ui/job/${s.job_id}/download?format=txt`}
+                          download
+                        >
+                          ⤓ Plain text
+                        </a>
+                      </div>
+                      {isExpanded && (
+                        <div className="transcript">
+                          {transcript.split(/\n{2,}/).map((para, i) => (
+                            <p key={i}>{para.trim()}</p>
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                   {j?.error && <div className="error" style={{ marginTop: 8 }}>{j.error}</div>}
                 </div>
@@ -420,7 +490,7 @@ export default function Home() {
       )}
 
       <footer className="footer">
-        Transcribe staging · admin-v1 · {new Date().getFullYear()}
+        Niranjana Swami — Transcribe · {new Date().getFullYear()}
       </footer>
     </main>
   );
