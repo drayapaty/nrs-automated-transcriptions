@@ -5,9 +5,13 @@
  * shape /api/jobs expects: a downloadable audio URL + optional metadata
  * that the pipeline can stamp onto the resulting transcript.
  *
- * v0 supports NRS only. YT is stubbed pending a yt-dlp / ytdl-core
- * integration on the serverless edge.
+ * NRS: hits backend.niranjanaswami.net for a presigned S3 URL.
+ * YT : @distube/ytdl-core extracts the direct googlevideo.com audio URL
+ *      so the existing pipeline can stream from it without any S3
+ *      round-trip.
  */
+
+import ytdl from "@distube/ytdl-core";
 
 const NRS_API_DETAIL = "https://backend.niranjanaswami.net/api/Lecture";
 
@@ -100,13 +104,142 @@ export async function resolveNrs(
   };
 }
 
+const YT_ID_RE =
+  /(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+
+function extractYtId(input: string): string | null {
+  // Plain 11-char ID (no URL) — accept directly.
+  if (/^[a-zA-Z0-9_-]{11}$/.test(input.trim())) return input.trim();
+  const m = YT_ID_RE.exec(input);
+  return m ? m[1] : null;
+}
+
+/**
+ * cobalt.tools public API fallback. Free, no auth. Public instance URL is
+ * env-overridable because the hosted instance has moved a few times.
+ * Returns just the direct stream URL on success — title/duration come
+ * from a separate oEmbed call.
+ */
+async function resolveYtViaCobalt(
+  videoId: string
+): Promise<{ audio_url: string; title: string } | null> {
+  const instance = process.env.COBALT_API_URL || "https://api.cobalt.tools/";
+  const apiUrl = instance.replace(/\/+$/, "") + "/api/json";
+  try {
+    const r = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        url: `https://www.youtube.com/watch?v=${videoId}`,
+        isAudioOnly: true,
+        aFormat: "mp3",
+        filenamePattern: "basic",
+      }),
+    });
+    if (!r.ok) return null;
+    const data = (await r.json()) as {
+      status?: string;
+      url?: string;
+      text?: string;
+    };
+    if ((data.status === "stream" || data.status === "redirect") && data.url) {
+      // oEmbed for title
+      let title = `YouTube ${videoId}`;
+      try {
+        const oe = await fetch(
+          `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+        );
+        if (oe.ok) {
+          const meta = (await oe.json()) as { title?: string };
+          if (meta.title) title = meta.title;
+        }
+      } catch {
+        /* ignore — title fallback is fine */
+      }
+      return { audio_url: data.url, title };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export async function resolveYt(
-  _sourceLink: string
+  sourceLink: string
 ): Promise<ResolvedSource | ResolverError> {
+  const videoId = extractYtId(sourceLink);
+  if (!videoId) {
+    return {
+      code: 400,
+      message:
+        "Could not extract a YouTube video ID from source_link. Expected a YouTube URL or bare 11-char video ID.",
+    };
+  }
+
+  // Primary: @distube/ytdl-core
+  let info: Awaited<ReturnType<typeof ytdl.getInfo>> | null = null;
+  let ytdlError = "";
+  try {
+    info = await ytdl.getInfo(`https://www.youtube.com/watch?v=${videoId}`);
+  } catch (err) {
+    ytdlError = err instanceof Error ? err.message : String(err);
+    console.warn(`[resolveYt] ytdl-core failed for ${videoId}: ${ytdlError}`);
+  }
+
+  if (info) {
+    // Pick the best audio-only format. ytdl annotates formats with hasAudio /
+    // hasVideo / audioBitrate. Sort by bitrate desc and take the top.
+    const audioOnly = info.formats
+      .filter((f) => f.hasAudio && !f.hasVideo && f.url)
+      .sort((a, b) => (b.audioBitrate || 0) - (a.audioBitrate || 0));
+    const chosen =
+      audioOnly[0] ?? info.formats.find((f) => f.hasAudio && f.url);
+    if (chosen?.url) {
+      const v = info.videoDetails;
+      const publishDate = v.publishDate || v.uploadDate || "";
+      const isoDate = publishDate ? `${publishDate}T00:00:00.000Z` : "";
+      const year = publishDate
+        ? parseInt(publishDate.substring(0, 4), 10)
+        : undefined;
+      const lengthSec = parseInt(v.lengthSeconds || "0", 10);
+      const duration = lengthSec
+        ? new Date(lengthSec * 1000).toISOString().substring(11, 19)
+        : "";
+      return {
+        audio_url: chosen.url,
+        metadata: {
+          uuid: `yt-${videoId}`,
+          title: v.title || `YouTube ${videoId}`,
+          date: isoDate,
+          year: Number.isFinite(year) ? (year as number) : undefined,
+          duration,
+          source_type: "lecture",
+        },
+      };
+    }
+  }
+
+  // Fallback: cobalt.tools public API
+  console.warn(`[resolveYt] falling back to cobalt for ${videoId}`);
+  const cobalt = await resolveYtViaCobalt(videoId);
+  if (cobalt) {
+    return {
+      audio_url: cobalt.audio_url,
+      metadata: {
+        uuid: `yt-${videoId}`,
+        title: cobalt.title,
+        date: "",
+        duration: "",
+        source_type: "lecture",
+      },
+    };
+  }
+
   return {
-    code: 400,
-    message:
-      "YouTube source not yet supported. Use source=nrs with an NRS lecture URL or UUID. (Tracking in next iteration.)",
+    code: 502,
+    message: `YouTube fetch failed for ${videoId}. ytdl-core: ${
+      ytdlError || "no audio format"
+    }. cobalt.tools fallback also failed. Try again later or use a different video.`,
   };
 }
 

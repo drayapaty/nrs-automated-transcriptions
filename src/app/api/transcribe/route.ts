@@ -38,6 +38,7 @@ const Body = z.object({
   paragraph: z.boolean().optional(),
   provider: z.enum(["auto", "deepgram", "groq"]).optional(),
   callback_url: z.string().url().optional(),
+  notify_email: z.string().email().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -59,8 +60,16 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { source, source_link, translate, index, paragraph, provider, callback_url } =
-    parsed.data;
+  const {
+    source,
+    source_link,
+    translate,
+    index,
+    paragraph,
+    provider,
+    callback_url,
+    notify_email,
+  } = parsed.data;
 
   // Resolve user-facing source link → audio URL + metadata.
   const resolved = await resolveSource(source, source_link);
@@ -81,6 +90,7 @@ export async function POST(req: NextRequest) {
     paragraph: paragraph ?? true,
     provider: provider ?? "auto",
     ...(callback_url ? { callback_url } : {}),
+    ...(notify_email ? { notify_email } : {}),
   };
 
   const job_id = newJobId();

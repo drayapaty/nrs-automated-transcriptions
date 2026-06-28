@@ -1,33 +1,308 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+type JobStatus =
+  | "queued"
+  | "downloading"
+  | "transcribing"
+  | "cleaning"
+  | "translating"
+  | "indexing"
+  | "done"
+  | "failed";
+
+interface JobRecord {
+  job_id: string;
+  status: JobStatus | string;
+  progress?: { stage?: string; pct?: number; message?: string };
+  request?: { metadata?: { title?: string; date?: string; uuid?: string } };
+  resolved?: { metadata?: { title?: string; date?: string; uuid?: string } };
+  result?: { transcript_en?: string };
+  error?: string;
+  created_at?: string;
+  updated_at?: string;
+  finished_at?: string;
+}
+
+interface StoredJob {
+  job_id: string;
+  title: string;
+  uuid: string;
+  date: string;
+  submitted_at: string;
+}
+
+const STORAGE_KEY = "nrs-transcribe-jobs";
+
+function loadStored(): StoredJob[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as StoredJob[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStored(jobs: StoredJob[]) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs.slice(0, 25)));
+}
+
+function badgeClass(status: string): string {
+  if (status === "done") return "badge done";
+  if (status === "failed" || status === "error") return "badge failed";
+  if (status === "queued") return "badge queued";
+  return "badge running";
+}
+
+function fmtAge(iso?: string): string {
+  if (!iso) return "";
+  const ms = Date.now() - new Date(iso).getTime();
+  const m = Math.round(ms / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} hr ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 export default function Home() {
+  const [source, setSource] = useState<"nrs" | "yt">("nrs");
+  const [link, setLink] = useState("");
+  const [notifyEmail, setNotifyEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [stored, setStored] = useState<StoredJob[]>([]);
+  const [jobs, setJobs] = useState<Record<string, JobRecord>>({});
+
+  // Load history + remember last-used email on first paint.
+  useEffect(() => {
+    setStored(loadStored());
+    const lastEmail =
+      typeof window !== "undefined"
+        ? localStorage.getItem("nrs-transcribe-notify-email") || ""
+        : "";
+    if (lastEmail) setNotifyEmail(lastEmail);
+  }, []);
+
+  // Poll every job that isn't done/failed.
+  useEffect(() => {
+    const active = stored.filter((s) => {
+      const j = jobs[s.job_id];
+      return !j || (j.status !== "done" && j.status !== "failed");
+    });
+    if (active.length === 0) return;
+
+    let cancelled = false;
+    const tick = async () => {
+      for (const s of active) {
+        try {
+          const res = await fetch(`/api/ui/job/${s.job_id}`);
+          if (!res.ok) continue;
+          const data = (await res.json()) as JobRecord;
+          if (cancelled) return;
+          setJobs((prev) => ({ ...prev, [s.job_id]: data }));
+        } catch {
+          /* ignore transient */
+        }
+      }
+    };
+    tick();
+    const handle = setInterval(tick, 3000);
+    return () => {
+      cancelled = true;
+      clearInterval(handle);
+    };
+  }, [stored, jobs]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!link.trim()) {
+      setError("Paste a lecture URL or UUID.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const trimmedEmail = notifyEmail.trim();
+      if (trimmedEmail && typeof window !== "undefined") {
+        localStorage.setItem("nrs-transcribe-notify-email", trimmedEmail);
+      }
+      const res = await fetch("/api/ui/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source,
+          source_link: link.trim(),
+          ...(trimmedEmail ? { notify_email: trimmedEmail } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error || `HTTP ${res.status}`);
+        setSubmitting(false);
+        return;
+      }
+      const meta = data?.resolved?.metadata || {};
+      const entry: StoredJob = {
+        job_id: data.job_id,
+        title: meta.title || "(untitled)",
+        uuid: meta.uuid || "",
+        date: meta.date || "",
+        submitted_at: new Date().toISOString(),
+      };
+      const next = [entry, ...stored];
+      setStored(next);
+      saveStored(next);
+      setLink("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function clearHistory() {
+    setStored([]);
+    setJobs({});
+    saveStored([]);
+  }
+
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem", maxWidth: 720 }}>
-      <h1>nrs-automated-transcriptions</h1>
-      <p>
-        Internal API service. Transcribes audio (Deepgram → Claude cleanup),
-        optionally translates (RU/UK), and indexes results to OpenSearch.
-      </p>
-      <h2>Endpoints</h2>
-      <ul>
-        <li>
-          <code>POST /api/jobs</code> — create a transcription job
-        </li>
-        <li>
-          <code>GET /api/jobs/:id</code> — poll job status / get result
-        </li>
-        <li>
-          <code>POST /api/jobs/:id/translate</code> — request additional translations
-        </li>
-        <li>
-          <code>POST /api/jobs/:id/index</code> — index transcript to OpenSearch
-        </li>
-        <li>
-          <code>GET /api/health</code> — health check
-        </li>
-      </ul>
-      <p>
-        See <a href="https://github.com/drayapaty/nrs-automated-transcriptions">README</a> for
-        request/response shapes and auth.
-      </p>
+    <main className="container">
+      <header className="header">
+        <div className="om">श्री</div>
+        <h1>Transcribe a Lecture</h1>
+        <p className="subtitle">
+          Paste a niranjanaswami.net lecture URL or UUID. The pipeline transcribes, cleans up Sanskrit, paragraphs, and indexes the result.
+        </p>
+      </header>
+
+      <section className="card">
+        {error && <div className="error">{error}</div>}
+        <form onSubmit={submit}>
+          <div className="row">
+            <div className="field shrink">
+              <label htmlFor="source">Source</label>
+              <select
+                id="source"
+                className="select"
+                value={source}
+                onChange={(e) => setSource(e.target.value as "nrs" | "yt")}
+              >
+                <option value="nrs">NRS lecture</option>
+                <option value="yt">YouTube</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="link">URL or UUID</label>
+              <input
+                id="link"
+                className="input"
+                type="text"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder={
+                  source === "nrs"
+                    ? "https://niranjanaswami.net/media/lectures/<uuid>  or  <uuid>"
+                    : "https://www.youtube.com/watch?v=…  or  https://youtu.be/…  or  11-char video id"
+                }
+                disabled={submitting}
+                autoComplete="off"
+              />
+            </div>
+          </div>
+          <div className="field">
+            <label htmlFor="notifyEmail">Notify when done (optional)</label>
+            <input
+              id="notifyEmail"
+              className="input"
+              type="email"
+              value={notifyEmail}
+              onChange={(e) => setNotifyEmail(e.target.value)}
+              placeholder="you@example.com"
+              disabled={submitting}
+              autoComplete="email"
+            />
+          </div>
+          <div className="field">
+            <button type="submit" className="btn btn-block" disabled={submitting}>
+              {submitting ? <span className="spinner" /> : null}
+              {submitting ? "Submitting…" : "Submit"}
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <h2 className="section-title">Recent jobs</h2>
+      {stored.length === 0 ? (
+        <div className="empty">No jobs yet. Submit a lecture above.</div>
+      ) : (
+        <>
+          <div className="jobs">
+            {stored.map((s) => {
+              const j = jobs[s.job_id];
+              const status = j?.status || "queued";
+              const pct = j?.progress?.pct ?? 0;
+              const stage = j?.progress?.stage || status;
+              return (
+                <div key={s.job_id} className="job">
+                  <div className="job-top">
+                    <div className="job-title" title={s.title}>{s.title}</div>
+                    <div className="job-meta">{fmtAge(s.submitted_at)}</div>
+                  </div>
+                  <div className="job-bottom">
+                    <span className={badgeClass(status)}>{status}</span>
+                    <span>{stage} · {pct}%</span>
+                  </div>
+                  <div className="progress"><div style={{ width: `${pct}%` }} /></div>
+                  {status === "done" && (
+                    <div className="job-actions">
+                      <a
+                        className="download-link"
+                        href={`/api/ui/job/${s.job_id}/download?format=pdf`}
+                        download
+                      >
+                        ⤓ PDF
+                      </a>
+                      <a
+                        className="download-link"
+                        href={`/api/ui/job/${s.job_id}/download?format=md`}
+                        download
+                      >
+                        ⤓ Markdown
+                      </a>
+                      <a
+                        className="download-link"
+                        href={`/api/ui/job/${s.job_id}/download?format=txt`}
+                        download
+                      >
+                        ⤓ Plain text
+                      </a>
+                    </div>
+                  )}
+                  {j?.error && <div className="error" style={{ marginTop: 8 }}>{j.error}</div>}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ textAlign: "center", marginTop: 16 }}>
+            <button
+              className="btn"
+              style={{ background: "transparent", color: "var(--text-muted)", padding: "6px 14px", fontSize: 12 }}
+              onClick={clearHistory}
+            >
+              clear history
+            </button>
+          </div>
+        </>
+      )}
+
+      <footer className="footer">
+        Transcribe staging · admin-v1 · {new Date().getFullYear()}
+      </footer>
     </main>
   );
 }
