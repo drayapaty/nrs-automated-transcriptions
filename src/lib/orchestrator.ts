@@ -45,12 +45,12 @@ export async function runPipeline(job: Job): Promise<void> {
 
   try {
     // -- Stage 1: transcribe ------------------------------------------------
-    // Deepgram URL mode — Deepgram fetches the presigned S3 URL itself.
-    // No upload from the Vercel function, no size limit, no memory pressure.
+    // Groq Whisper-large-v3 PRIMARY (handles Sanskrit prayers Maharaja
+    // recites). Deepgram URL mode is the fallback if Groq is rate-limited.
     await setStatus(job_id, "transcribing", {
       stage: "transcribing",
       pct: 15,
-      message: "via Deepgram URL mode",
+      message: "via Groq Whisper",
     });
     const tr = await transcribe(req.s3_url, req.provider || "auto");
 
