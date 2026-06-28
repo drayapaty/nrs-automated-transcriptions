@@ -10,6 +10,10 @@ import type { NextAuthConfig } from "next-auth";
 export const authConfig = {
   trustHost: true,
   secret: process.env.AUTH_SECRET,
+  // Explicit JWT strategy — must match src/auth.ts so the cookie format
+  // is identical between Edge middleware (this config) and the Node
+  // runtime route handler (auth.ts).
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/signin",
     verifyRequest: "/signin/check-email",
