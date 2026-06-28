@@ -137,7 +137,39 @@ export async function transcribeWithDeepgramUrl(
   throw lastErr || new Error("Deepgram: max retries exceeded");
 }
 
-// --- Groq Whisper (fallback, requires local buffer) -------------------------
+// --- Groq Whisper (now PRIMARY for NRS lectures, with byte-chunk fallback) --
+//
+// Whisper-large-v3 has a 25 MB per-call hard limit. Maharaja's lectures run
+// 60-120 min and easily exceed that. To stay on Whisper for the whole file
+// we slice the Buffer at ~22 MB byte boundaries (no ffmpeg available in the
+// Vercel runtime) and join the transcripts. mp3 frame sync breaks at the
+// boundary but Whisper tolerates the brief glitch — a few words may be
+// duplicated or dropped at each seam, which the Sonnet cleanup pass handles.
+// Reason for using Whisper as primary: Deepgram nova-3 (English-only) filters
+// Sanskrit chants as non-speech and silently drops them — Maharaja's opening
+// praṇāmas never made it into the transcript. Whisper is multilingual.
+const GROQ_CHUNK_BYTES = 22 * 1024 * 1024;
+
+export async function transcribeWithGroqChunked(
+  audio: Buffer
+): Promise<TranscriptionResult> {
+  if (audio.byteLength <= GROQ_MAX_BYTES) {
+    return transcribeWithGroq(audio);
+  }
+  const chunks: Buffer[] = [];
+  for (let i = 0; i < audio.byteLength; i += GROQ_CHUNK_BYTES) {
+    chunks.push(audio.subarray(i, Math.min(i + GROQ_CHUNK_BYTES, audio.byteLength)));
+  }
+  console.log(
+    `[groq] splitting ${(audio.byteLength / 1024 / 1024).toFixed(1)} MB into ${chunks.length} byte-chunks of ~${(GROQ_CHUNK_BYTES / 1024 / 1024).toFixed(0)} MB`
+  );
+  const texts: string[] = [];
+  for (let i = 0; i < chunks.length; i++) {
+    const r = await transcribeWithGroq(chunks[i], `chunk_${i}.mp3`);
+    texts.push(r.text);
+  }
+  return { text: texts.join(" "), provider: "groq" };
+}
 
 export async function transcribeWithGroq(
   audio: Buffer,
@@ -224,36 +256,24 @@ export async function transcribe(
 
   if (provider === "groq") {
     const { buffer } = await downloadBuffer(audioUrl);
-    return transcribeWithGroq(buffer);
+    return transcribeWithGroqChunked(buffer);
   }
 
-  // auto: Deepgram URL mode first (no size limit). Groq fallback only for
-  // small files — otherwise we'd hit the same 413 problem that broke the
-  // earlier job.
-  try {
-    return await transcribeWithDeepgramUrl(audioUrl);
-  } catch (err) {
-    if (groqKeys().length === 0) throw err;
-
-    const size = await probeSize(audioUrl);
-    if (size === null || size > GROQ_MAX_BYTES) {
+  // auto: Groq Whisper PRIMARY (multilingual — captures Sanskrit prayers +
+  // verses Maharaja recites), Deepgram URL mode FALLBACK (handles cases
+  // where Groq is rate-limited / down or audio is so large we want the
+  // single-call URL mode). Reversed from the original order: Deepgram
+  // nova-3 English-only filters Sanskrit chants as non-speech and silently
+  // drops them, so the opening praṇāmas never made it into the transcript.
+  if (groqKeys().length > 0) {
+    try {
+      const { buffer } = await downloadBuffer(audioUrl);
+      return await transcribeWithGroqChunked(buffer);
+    } catch (err) {
       console.warn(
-        `[transcribe] Deepgram failed and file is ${
-          size !== null ? (size / 1024 / 1024).toFixed(1) + "MB" : "unknown size"
-        } — skipping Groq fallback (would exceed 25 MB limit). ` +
-          `Deepgram error: ${(err as Error).message}`
+        `[transcribe] Groq Whisper failed, falling back to Deepgram: ${(err as Error).message}`
       );
-      throw err;
     }
-
-    console.warn(
-      `[transcribe] Deepgram failed, falling back to Groq (${(
-        size /
-        1024 /
-        1024
-      ).toFixed(1)}MB): ${(err as Error).message}`
-    );
-    const { buffer } = await downloadBuffer(audioUrl);
-    return transcribeWithGroq(buffer);
   }
+  return transcribeWithDeepgramUrl(audioUrl);
 }

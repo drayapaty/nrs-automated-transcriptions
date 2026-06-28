@@ -96,7 +96,7 @@ function fmtAge(iso?: string): string {
 }
 
 export default function Home() {
-  const [source, setSource] = useState<"nrs" | "yt" | "upload">("nrs");
+  const [source, setSource] = useState<"nrs" | "yt" | "upload">("upload");
   const [link, setLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
