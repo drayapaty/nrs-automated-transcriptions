@@ -67,7 +67,7 @@ function stageLabel(stage: string, status: string): string {
     case "downloading":
       return "Downloading audio";
     case "transcribing":
-      return "Transcribing (Deepgram)";
+      return "Transcribing (Whisper)";
     case "cleaning":
       return "Cleaning Sanskrit + paragraphing (Sonnet)";
     case "translating":
