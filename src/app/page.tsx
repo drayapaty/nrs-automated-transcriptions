@@ -69,8 +69,10 @@ function fmtAge(iso?: string): string {
 }
 
 export default function Home() {
-  const [source, setSource] = useState<"nrs" | "yt">("nrs");
+  const [source, setSource] = useState<"nrs" | "yt" | "upload">("nrs");
   const [link, setLink] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [notifyEmail, setNotifyEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,16 +122,108 @@ export default function Home() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const trimmedEmail = notifyEmail.trim();
+    if (trimmedEmail && typeof window !== "undefined") {
+      localStorage.setItem("nrs-transcribe-notify-email", trimmedEmail);
+    }
+
+    // === UPLOAD MODE — 3-step orchestration ===
+    if (source === "upload") {
+      if (!file) {
+        setError("Pick an audio file to upload.");
+        return;
+      }
+      setSubmitting(true);
+      setUploadProgress(0);
+      try {
+        // Step 1 — ask the server for a presigned PUT URL
+        const initRes = await fetch("/api/ui/upload-init", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            contentType: file.type || "audio/mpeg",
+            size: file.size,
+          }),
+        });
+        const initData = await initRes.json();
+        if (!initRes.ok) {
+          setError(initData?.error || `init failed (HTTP ${initRes.status})`);
+          setSubmitting(false);
+          setUploadProgress(null);
+          return;
+        }
+        const { key, uploadUrl } = initData as { key: string; uploadUrl: string };
+
+        // Step 2 — PUT the file directly to S3 with progress
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", uploadUrl);
+          xhr.setRequestHeader("Content-Type", file.type || "audio/mpeg");
+          xhr.upload.onprogress = (evt) => {
+            if (evt.lengthComputable) {
+              setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
+            }
+          };
+          xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300
+              ? resolve()
+              : reject(new Error(`S3 PUT failed (HTTP ${xhr.status})`));
+          xhr.onerror = () => reject(new Error("Network error during upload"));
+          xhr.send(file);
+        });
+        setUploadProgress(100);
+
+        // Step 3 — tell the server the upload is done; it presigns a GET URL
+        // and forwards to the transcription pipeline
+        const doneRes = await fetch("/api/ui/upload-done", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key,
+            filename: file.name,
+            ...(trimmedEmail ? { notify_email: trimmedEmail } : {}),
+          }),
+        });
+        const doneData = await doneRes.json();
+        if (!doneRes.ok) {
+          setError(doneData?.error || `submit failed (HTTP ${doneRes.status})`);
+          setSubmitting(false);
+          setUploadProgress(null);
+          return;
+        }
+        const meta = doneData?.resolved?.metadata || {};
+        const entry: StoredJob = {
+          job_id: doneData.job_id,
+          title: meta.title || file.name,
+          uuid: meta.uuid || "",
+          date: meta.date || "",
+          submitted_at: new Date().toISOString(),
+        };
+        const next = [entry, ...stored];
+        setStored(next);
+        saveStored(next);
+        setFile(null);
+        // Reset native file input
+        const inp = document.getElementById("file") as HTMLInputElement | null;
+        if (inp) inp.value = "";
+        setUploadProgress(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+        setUploadProgress(null);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    // === URL MODE (nrs / yt) ===
     if (!link.trim()) {
       setError("Paste a lecture URL or UUID.");
       return;
     }
     setSubmitting(true);
     try {
-      const trimmedEmail = notifyEmail.trim();
-      if (trimmedEmail && typeof window !== "undefined") {
-        localStorage.setItem("nrs-transcribe-notify-email", trimmedEmail);
-      }
       const res = await fetch("/api/ui/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,29 +284,54 @@ export default function Home() {
                 id="source"
                 className="select"
                 value={source}
-                onChange={(e) => setSource(e.target.value as "nrs" | "yt")}
+                onChange={(e) => setSource(e.target.value as "nrs" | "yt" | "upload")}
               >
                 <option value="nrs">NRS lecture</option>
                 <option value="yt">YouTube</option>
+                <option value="upload">Upload audio</option>
               </select>
             </div>
-            <div className="field">
-              <label htmlFor="link">URL or UUID</label>
-              <input
-                id="link"
-                className="input"
-                type="text"
-                value={link}
-                onChange={(e) => setLink(e.target.value)}
-                placeholder={
-                  source === "nrs"
-                    ? "https://niranjanaswami.net/media/lectures/<uuid>  or  <uuid>"
-                    : "https://www.youtube.com/watch?v=…  or  https://youtu.be/…  or  11-char video id"
-                }
-                disabled={submitting}
-                autoComplete="off"
-              />
-            </div>
+            {source !== "upload" ? (
+              <div className="field">
+                <label htmlFor="link">URL or UUID</label>
+                <input
+                  id="link"
+                  className="input"
+                  type="text"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  placeholder={
+                    source === "nrs"
+                      ? "https://niranjanaswami.net/media/lectures/<uuid>  or  <uuid>"
+                      : "https://www.youtube.com/watch?v=…  or  https://youtu.be/…  or  11-char video id"
+                  }
+                  disabled={submitting}
+                  autoComplete="off"
+                />
+              </div>
+            ) : (
+              <div className="field">
+                <label htmlFor="file">Audio file (mp3, m4a, wav, webm)</label>
+                <input
+                  id="file"
+                  className="input"
+                  type="file"
+                  accept="audio/*,.mp3,.m4a,.wav,.webm,.flac,.ogg"
+                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                  disabled={submitting}
+                />
+                {file && (
+                  <div style={{ marginTop: 6, fontSize: 12, color: "var(--text-muted)" }}>
+                    {file.name} · {(file.size / 1024 / 1024).toFixed(1)} MB
+                  </div>
+                )}
+                {uploadProgress !== null && (
+                  <div className="progress" style={{ marginTop: 8 }}>
+                    <div style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="field">
             <label htmlFor="notifyEmail">Notify when done (optional)</label>
