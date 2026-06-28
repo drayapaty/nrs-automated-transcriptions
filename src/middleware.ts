@@ -17,7 +17,7 @@ import { authConfig } from "@/auth.config";
 
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_PREFIXES = ["/signin", "/api/auth", "/api/health"];
+const PUBLIC_PREFIXES = ["/signin", "/api/auth", "/api/health", "/api/debug-auth"];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PREFIXES.some(
