@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 type JobStatus =
   | "queued"
@@ -105,6 +106,7 @@ export default function Home() {
   const [jobs, setJobs] = useState<Record<string, JobRecord>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
+  const { data: session } = useSession();
 
   // Load history + remember last-used email on first paint.
   useEffect(() => {
@@ -491,6 +493,26 @@ export default function Home() {
 
       <footer className="footer">
         Niranjana Swami — Transcribe · {new Date().getFullYear()}
+        {session?.user?.email && (
+          <span style={{ marginLeft: 12 }}>
+            · signed in as {session.user.email} ·{" "}
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: "/signin" })}
+              style={{
+                background: "transparent",
+                border: 0,
+                color: "var(--accent)",
+                cursor: "pointer",
+                padding: 0,
+                font: "inherit",
+                textDecoration: "underline",
+              }}
+            >
+              sign out
+            </button>
+          </span>
+        )}
       </footer>
     </main>
   );
