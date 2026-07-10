@@ -15,13 +15,27 @@
 
 import { deepgramKeys, groq, groqKeys, rotateGroqKey } from "../clients";
 
+// Whisper `prompt` field — biases decoding toward Vaiṣṇava vocabulary AND
+// verse-shape audio. Whisper's prompt cap is ~224 tokens; we include a noun
+// bank (proper nouns, common concepts) plus 3 sample Sanskrit verses. Verified
+// empirically: including sample verses makes Whisper preserve verse-length
+// Sanskrit that the noun-only version silently drops (Maharaja's SB 11.14.15
+// citation was dropped by noun-only prompt, preserved when sample verses added).
 const SANSKRIT_PROMPT =
-  "Srimad Bhagavatam, Bhagavad-gita, Caitanya-caritamrita, Krishna, Krsna, Srila Prabhupada, " +
-  "Hare Krishna, Caitanya Mahaprabhu, Nityananda, Vrindavan, Mayapur, Govardhana, Kali-yuga, " +
-  "Damodarastaka, Siksastakam, Bhaktivedanta Swami, sankirtan, prasadam, japa, kirtan, bhakti, " +
-  "guru, diksha, siksha, vani, vapu, sastra, sadhu, brahmana, dharma, karma, prema, rasa, lila, " +
-  "acarya, Narada Muni, Vyasadeva, Sukadeva Gosvami, Maharaja Pariksit, Naimisaranya, " +
-  "Haridas Thakur, Rupa Gosvami, Sanatana Gosvami, Niranjana Swami, Prabhupada said";
+  // Nouns / concepts (~40 terms)
+  "Srimad Bhagavatam, Bhagavad-gita, Caitanya-caritamrita, Brihad-bhagavatamrita, " +
+  "Krishna, Krsna, Srila Prabhupada, Hare Krishna, Caitanya Mahaprabhu, Nityananda, " +
+  "Vrindavan, Mayapur, Govardhana, Bhaktivedanta Swami, sankirtan, prasadam, japa, " +
+  "kirtan, bhakti, guru, sastra, sadhu, brahmana, dharma, karma, prema, rasa, lila, " +
+  "acarya, Narada Muni, Vyasadeva, Sukadeva Gosvami, Prahlada Maharaja, Uddhava, " +
+  "Rupa Gosvami, Sanatana Gosvami, Nrsimha, Niranjana Swami. " +
+  // Sample verses to prime Whisper on verse-shape audio
+  "nehābhikrama-nāśo 'sti pratyavāyo na vidyate " +
+  "svalpam apy asya dharmasya trāyate mahato bhayāt. " +
+  "namas te narasiṁhāya prahlādāhlāda-dāyine " +
+  "hiraṇyakaśipor vakṣaḥ-śilā-ṭaṅka-nakhālaye. " +
+  "Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare " +
+  "Hare Rāma Hare Rāma Rāma Rāma Hare Hare.";
 
 // Deepgram Nova-3 KEYTERM PROMPTING — boosts recognition of these terms in the
 // PRIMARY Deepgram path (previously SANSKRIT_PROMPT only fed the Groq fallback,
