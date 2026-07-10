@@ -25,7 +25,8 @@ Two repos, one pipeline:
 │  │ 2. transcribe        Groq Whisper large-v3  (primary)      │   │  │
 │  │                      Deepgram Nova-3 URL    (fallback)     │   │  │
 │  │ 3. cleanup           Claude Sonnet 4.6 — IAST + paragraphs │   │  │
-│  │ 4. persist EN        OpenSearch nrs-lectures-auto-tx       │   │  │
+│  │ 4. persist EN        DynamoDB + OpenSearch                 │   │  │
+│  │                      nrs-lectures-auto-transcribe          │   │  │
 │  │ 5. translate         parallel RU / UK  (Sonnet, optional)  │   │  │
 │  │ 6. chunk + embed     OpenAI text-embedding-3-small         │   │  │
 │  │ 7. index RAG chunks  OpenSearch ask-nrs-lectures           │   │  │
