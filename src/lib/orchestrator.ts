@@ -16,6 +16,7 @@ import { setStatus, setResult, setError } from "./jobs";
 import { putLecture } from "./lectures";
 import { transcribe } from "./pipeline/transcribe";
 import { cleanupTranscript } from "./pipeline/cleanup";
+import { restoreVerses } from "./pipeline/verse-restore.mjs";
 import { translate } from "./pipeline/translate";
 import { indexTranscript } from "./pipeline/index-opensearch";
 import { sendCompletionEmail, sendFailureEmail } from "./email";
@@ -60,6 +61,11 @@ export async function runPipeline(job: Job): Promise<void> {
       await setStatus(job_id, "cleaning", { stage: "cleaning", pct: 40 });
       englishText = await cleanupTranscript(tr.text);
     }
+
+    // -- Stage 3b: verse-restore (deterministic corpus match, no LLM) ------
+    const { text: restoredText, stats: verseRestoreStats } =
+      restoreVerses(englishText);
+    englishText = restoredText;
 
     // Persist EN immediately so it's queryable even if translations fail later
     if (req.metadata?.uuid) {
@@ -143,6 +149,7 @@ export async function runPipeline(job: Job): Promise<void> {
         translation_model:
           req.translate && req.translate.length ? CLAUDE_MODEL : undefined,
         indexed_chunks,
+        verse_restore: verseRestoreStats,
       },
     };
     await setResult(job_id, result);

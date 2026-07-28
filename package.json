@@ -20,6 +20,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1075.0",
     "@aws-sdk/s3-request-presigner": "^3.1075.0",
     "@distube/ytdl-core": "^4.16.12",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@react-pdf/renderer": "^4.5.1",
     "@vercel/functions": "^2.0.0",
     "dotenv": "^17.4.1",

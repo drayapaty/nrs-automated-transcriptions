@@ -78,6 +78,13 @@ export interface JobResult {
     cleanup_model: string;
     translation_model?: string;
     indexed_chunks?: number;
+    verse_restore?: {
+      substituted: number;
+      already_canonical: number;
+      common_subs: number;
+      opening_fixed: boolean;
+      identified_verses: Array<{ reference: string; score: number }>;
+    };
   };
 }
 
