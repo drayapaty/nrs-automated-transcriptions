@@ -151,36 +151,162 @@ export async function transcribeWithDeepgramUrl(
   throw lastErr || new Error("Deepgram: max retries exceeded");
 }
 
-// --- Groq Whisper (now PRIMARY for NRS lectures, with byte-chunk fallback) --
+// --- MP3 header parsing (no external deps) -----------------------------------
 //
-// Whisper-large-v3 has a 25 MB per-call hard limit. Maharaja's lectures run
-// 60-120 min and easily exceed that. To stay on Whisper for the whole file
-// we slice the Buffer at ~22 MB byte boundaries (no ffmpeg available in the
-// Vercel runtime) and join the transcripts. mp3 frame sync breaks at the
-// boundary but Whisper tolerates the brief glitch — a few words may be
-// duplicated or dropped at each seam, which the Sonnet cleanup pass handles.
-// Reason for using Whisper as primary: Deepgram nova-3 (English-only) filters
-// Sanskrit chants as non-speech and silently drops them — Maharaja's opening
-// praṇāmas never made it into the transcript. Whisper is multilingual.
-const GROQ_CHUNK_BYTES = 22 * 1024 * 1024;
+// Skips ID3v2 tags and the Xing/Info VBR metadata frame so that bitrate
+// detection reads real audio frames and chunking never sends the Xing header
+// to Groq (which misreads the declared total duration and hangs).
+
+const MPEG1_L3_BITRATES = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
+const MPEG2_L3_BITRATES = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
+
+function findAudioDataStart(buf: Buffer): number {
+  let offset = 0;
+  if (buf.length >= 10 && buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) {
+    offset = ((buf[6] << 21) | (buf[7] << 14) | (buf[8] << 7) | buf[9]) + 10;
+  }
+  const limit = Math.min(buf.length - 4, offset + 16384);
+  for (let i = offset; i < limit; i++) {
+    if (buf[i] !== 0xFF || (buf[i + 1] & 0xE0) !== 0xE0) continue;
+    const versionBits = (buf[i + 1] >> 3) & 0x03;
+    const layerBits = (buf[i + 1] >> 1) & 0x03;
+    const brIdx = (buf[i + 2] >> 4) & 0x0F;
+    if (layerBits !== 0x01 || brIdx === 0 || brIdx === 15) continue;
+    let br = 0;
+    if (versionBits === 0x03) br = MPEG1_L3_BITRATES[brIdx];
+    else if (versionBits === 0x02 || versionBits === 0x00) br = MPEG2_L3_BITRATES[brIdx];
+    if (br <= 0) continue;
+    const sampleRate = versionBits === 0x03 ? 44100 : 22050;
+    const frameLen = Math.floor((144 * br * 1000) / sampleRate);
+    const xingOff = versionBits === 0x03
+      ? (((buf[i + 3] >> 6) & 0x03) === 0x03 ? 21 : 36)
+      : (((buf[i + 3] >> 6) & 0x03) === 0x03 ? 13 : 21);
+    if (i + xingOff + 4 <= buf.length) {
+      const tag = String.fromCharCode(buf[i + xingOff], buf[i + xingOff + 1],
+                                       buf[i + xingOff + 2], buf[i + xingOff + 3]);
+      if (tag === "Xing" || tag === "Info") {
+        return i + frameLen;
+      }
+    }
+    return i;
+  }
+  return offset;
+}
+
+function sampleFramesAt(buf: Buffer, offset: number, maxFrames: number): Record<number, number> {
+  const hits: Record<number, number> = {};
+  let count = 0;
+  const limit = Math.min(buf.length - 4, offset + 65536);
+  for (let i = offset; i < limit && count < maxFrames; i++) {
+    if (buf[i] !== 0xFF || (buf[i + 1] & 0xE0) !== 0xE0) continue;
+    const versionBits = (buf[i + 1] >> 3) & 0x03;
+    const layerBits = (buf[i + 1] >> 1) & 0x03;
+    const brIdx = (buf[i + 2] >> 4) & 0x0F;
+    if (brIdx === 0 || brIdx === 15) continue;
+    let br = 0;
+    if (layerBits === 0x01) {
+      if (versionBits === 0x03) br = MPEG1_L3_BITRATES[brIdx];
+      else if (versionBits === 0x02 || versionBits === 0x00) br = MPEG2_L3_BITRATES[brIdx];
+    }
+    if (br > 0) {
+      hits[br] = (hits[br] || 0) + 1;
+      count++;
+      const sampleRate = versionBits === 0x03 ? 44100 : 22050;
+      const frameLen = Math.floor((144 * br * 1000) / sampleRate);
+      if (frameLen > 4) i += frameLen - 1;
+    }
+  }
+  return hits;
+}
+
+function detectMp3BitrateKbps(buf: Buffer): number {
+  const audioStart = findAudioDataStart(buf);
+  const hits: Record<number, number> = {};
+  const positions = [0.10, 0.40, 0.70].map(p =>
+    Math.max(audioStart, Math.floor(buf.length * p))
+  );
+  for (const pos of positions) {
+    const partial = sampleFramesAt(buf, pos, 10);
+    for (const [br, count] of Object.entries(partial)) {
+      hits[Number(br)] = (hits[Number(br)] || 0) + count;
+    }
+  }
+  if (Object.keys(hits).length === 0) return 128;
+  let best = 128, bestCount = 0;
+  for (const [br, count] of Object.entries(hits)) {
+    if (count > bestCount) { best = Number(br); bestCount = count; }
+  }
+  return best;
+}
+
+// --- Groq Whisper (now PRIMARY for NRS lectures, with 2-min time chunking) ---
+//
+// Whisper drops content when processing long audio in a single call — even for
+// files well under its 25 MB limit. Empirically tested: 2-min time-based
+// chunks recover 51% more content than a single-call transcription. Shorter
+// (1-min) chunks fail because Whisper needs ~90s minimum context.
+//
+// Since ffmpeg is unavailable in Vercel, we parse the MP3 bitrate from the
+// frame header and calculate byte offsets for ~2-min segments. MP3 frame sync
+// breaks at slice boundaries but Whisper tolerates the brief glitch.
+//
+// response_format MUST be "json" — Groq's "text" format silently returns empty
+// on some segments (confirmed bug, not rate-limiting).
+
+const TARGET_CHUNK_SECS = 120; // 2 minutes — empirically optimal
 
 export async function transcribeWithGroqChunked(
   audio: Buffer
 ): Promise<TranscriptionResult> {
-  if (audio.byteLength <= GROQ_MAX_BYTES) {
+  const audioStart = findAudioDataStart(audio);
+  const bitrateKbps = detectMp3BitrateKbps(audio);
+  const bytesPerSec = (bitrateKbps * 1000) / 8;
+  const chunkBytes = Math.floor(bytesPerSec * TARGET_CHUNK_SECS);
+  const estimatedDuration = (audio.byteLength - audioStart) / bytesPerSec;
+
+  // Short audio (< 3 min) — single call is fine
+  if (estimatedDuration <= 180) {
+    console.log(`[groq] short audio (~${Math.round(estimatedDuration)}s), single call`);
     return transcribeWithGroq(audio);
   }
+
   const chunks: Buffer[] = [];
-  for (let i = 0; i < audio.byteLength; i += GROQ_CHUNK_BYTES) {
-    chunks.push(audio.subarray(i, Math.min(i + GROQ_CHUNK_BYTES, audio.byteLength)));
+  for (let i = audioStart; i < audio.byteLength; i += chunkBytes) {
+    const end = Math.min(i + chunkBytes, audio.byteLength);
+    // Skip tiny tail fragments (< 5s of audio)
+    if (end - i < bytesPerSec * 5 && chunks.length > 0) {
+      // Append tail to last chunk instead of creating a tiny segment
+      const last = chunks[chunks.length - 1];
+      chunks[chunks.length - 1] = Buffer.concat([last, audio.subarray(i, end)]);
+    } else {
+      chunks.push(audio.subarray(i, end));
+    }
   }
+
   console.log(
-    `[groq] splitting ${(audio.byteLength / 1024 / 1024).toFixed(1)} MB into ${chunks.length} byte-chunks of ~${(GROQ_CHUNK_BYTES / 1024 / 1024).toFixed(0)} MB`
+    `[groq] ${bitrateKbps} kbps, ~${Math.round(estimatedDuration)}s → ` +
+    `${chunks.length} × ~${TARGET_CHUNK_SECS}s chunks (${(chunkBytes / 1024).toFixed(0)} KB each)`
   );
+
   const texts: string[] = [];
   for (let i = 0; i < chunks.length; i++) {
-    const r = await transcribeWithGroq(chunks[i], `chunk_${i}.mp3`);
-    texts.push(r.text);
+    if (chunks[i].byteLength > GROQ_MAX_BYTES) {
+      // Chunk exceeds Whisper limit (very high bitrate) — sub-split by bytes
+      const subChunks: Buffer[] = [];
+      const subSize = GROQ_MAX_BYTES - 1024 * 1024;
+      for (let j = 0; j < chunks[i].byteLength; j += subSize) {
+        subChunks.push(chunks[i].subarray(j, Math.min(j + subSize, chunks[i].byteLength)));
+      }
+      for (let s = 0; s < subChunks.length; s++) {
+        const r = await transcribeWithGroq(subChunks[s], `chunk_${i}_${s}.mp3`);
+        texts.push(r.text);
+      }
+    } else {
+      const r = await transcribeWithGroq(chunks[i], `chunk_${i}.mp3`);
+      texts.push(r.text);
+    }
+    // Pace requests to avoid rate limits (1s between chunks)
+    if (i < chunks.length - 1) await sleep(1000);
   }
   return { text: texts.join(" "), provider: "groq" };
 }
@@ -210,14 +336,15 @@ export async function transcribeWithGroq(
         model: "whisper-large-v3",
         file,
         language: "en",
-        response_format: "text",
+        response_format: "json",
         prompt: SANSKRIT_PROMPT,
       });
 
-      return {
-        text: (response as unknown as string) || "",
-        provider: "groq",
-      };
+      const text = typeof response === "string"
+        ? response
+        : (response as { text?: string }).text || "";
+
+      return { text, provider: "groq" };
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string };
       const status = e.status || 0;
