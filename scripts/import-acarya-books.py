@@ -35,7 +35,7 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 CORPUS = HERE.parent / "corpus.json"
-CONTENT = HERE.parent / "askacarya/content"
+CONTENT = HERE.parent.parent / "askacarya/content"
 DRY = "--dry-run" in sys.argv
 
 MARKER = re.compile(r"(?m)^[ \t\x0c]*(?:TEXTS?|Texts?|Anuccheda|ANUCCHEDA)[ \t]+([\d\-–]+)[ \t]*$")
@@ -58,18 +58,38 @@ def looks_like_verse(block: str) -> bool:
     return eng / words < 0.12          # a translation blows past this
 
 
+# Key formats the corpus ACTUALLY uses (measured 2026-07-28 — the 11,753-
+# duplicate defect came from inventing "SB 1.3.28" instead of these):
+#   SB 1 3.28                 canto SPACE chapter.verse   (12,230 entries)
+#   CC Madhya-līlā 8.128      līlā NAME, not a number     (11,185)
+#   BG 2.13                   chapter.verse               (631)
+#   BB 91                     flat                        (373)
+# Anything we cannot render in an existing shape is SKIPPED, not guessed —
+# a wrong key is worse than a missing verse (it hides the real entry).
+LILA = {"adi": "Ādi", "madhya": "Madhya", "antya": "Antya"}
+
+
 def canonical_ref(r) -> str | None:
-    part = (r.get("scripture_part") or "").strip()
-    sec = (r.get("scripture_section") or "").strip()
-    ch = (r.get("scripture_chapter") or "").strip()
-    v = (r.get("scripture_verse") or "").strip()
+    def f(key):
+        v = r.get(key)
+        v = "" if v is None else str(v).strip()
+        return "" if v in ("", "None") else v
+
+    part, sec, ch, v = f("scripture_part"), f("scripture_section"), f("scripture_chapter"), f("scripture_verse")
     if not part or not v:
         return None
-    if part in ("SB", "CC", "CB") and sec and ch:
-        return f"{part} {sec}.{ch}.{v}"
-    if ch:
-        return f"{part} {ch}.{v}"
-    return f"{part} {v}"
+    if part == "SB":
+        return f"SB {sec} {ch}.{v}" if sec and ch else None
+    if part == "CC":
+        lila = LILA.get(sec.lower())
+        return f"CC {lila}-līlā {ch}.{v}" if lila and ch else None
+    if part == "BG":
+        return f"BG {ch}.{v}" if ch else None
+    if part == "BB":
+        return f"BB {ch}.{v}" if ch else f"BB {v}"
+    # CB / HBV / sandarbhas: no established key shape in the corpus yet.
+    # Deliberately skipped — needs a format decision first (DECISIONS.md).
+    return None
 
 
 def main():

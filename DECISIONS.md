@@ -84,3 +84,17 @@
 **Decision** (Dina Gauranga Prabhu): no script writes to `corpus.json` until (a) all tests pass and (b) he gives permission for that specific run. Dry-run + test output is presented for review first; the write is a separate, explicitly-approved step. Applies to `import-acarya-books.py`, `import-from-askacarya.py`, and any future corpus builder.
 
 **Why**: the 2026-07-28 tier-2 import wrote 11,753 duplicate entries before being tested, and had to be reverted from backup.
+
+## 2026-07-28 — Tier-2 ācārya-book import: BLOCKED, approach is unsound
+
+**Finding**: verse_map regions record where a region SITS in a book, not the identity of the verse printed at its head — because ācārya commentaries quote verses from elsewhere. So "region location = verse ref" is invalid. Proof: the importer wanted to file *karma-jaṁ buddhi-yuktā hi phalaṁ tyaktvā manīṣiṇaḥ* as **BG 18.51**; that text is already in the corpus as **BG 2.51**, where it belongs. Test battery (`scripts/test-acarya-import.py`, T6) detected **1,520 such ref-mismatches** out of 1,352 proposed entries — SB 1,305, BB 187, BG 28. The remaining ~627 are merely unverifiable, not verified.
+
+**Decision**: `import-acarya-books.py` must NOT write to the corpus using region-derived refs. Ever. A wrong key is worse than a missing verse: it asserts a false citation AND hides the correct entry from the matcher — the same damage class cleaned out of production earlier today.
+
+**What IS sound**: the text extraction itself (T5 passed on all 1,352 — verse-shaped, IAST-dense, no English bleed) and the verse-shape gate (rejects commentary-only regions).
+
+**Two defensible paths if this is revisited**:
+1. Ref-free entries — store with `source` and a synthetic key, asserting no scripture citation; verse-restore's content-match fallback finds them by similarity anyway.
+2. A book's OWN verses only — where a work prints "Text N" within its own numbering (Caitanya-bhāgavata's verses, Bṛhad-bhāgavatāmṛta's verses), not verses it quotes. Smaller yield, defensible refs.
+
+**Also fixed on the way** (kept for whichever path is taken): key formatter now emits the corpus's real shapes — `SB 1 3.28` (canto SPACE chapter.verse), `CC Madhya-līlā 8.128` (līlā NAME), `BG 2.13`, `BB 91` — instead of the invented `SB 1.3.28` that caused the 11,753-duplicate revert. CB/HBV/sandarbhas are skipped: no established key shape exists yet, and guessing one is how this went wrong.
