@@ -116,3 +116,15 @@
 **Honest scope note**: the aliases add no matching power — the identical CC text already matched (mangled v3 → 0.71 both before and after). What they add is the correct LABEL and a key for spoken references.
 
 Tests: `scripts/test-verse-restore.mjs` 29/29 (was 23).
+
+## 2026-07-28 — Match gate: 0.35 WITH a length guard, not a bare gate drop
+
+**Rejected first**: swapping the metric. Compared jaccard / dice / containment / lcs_ratio on 9 hand-labelled real garbles (`scripts/eval-metric.py`). Dice is Jaccard rescaled (Dice = 2J/(1+J)) — identical ranking, adds nothing. Containment (5/7) and lcs_ratio (3/7) are WORSE: lcs matched the English sentence "And so the devotees were very much pleased" to SB 12.2.12 at 0.79. Current metric already ranks the correct verse top-1 in 7/7. **The metric was never the problem; the gate was.**
+
+**Rejected second**: dropping the gate to 0.25-0.30. `scripts/eval-gate.py` harvested all 128 Sanskrit-looking blocks from 17 transcripts. A bare drop admits 6 corruptions where Mahārāja simply says **"Hare Kṛṣṇa."** as a greeting — 9 chars scoring 0.35 against the 68-char Mahā-mantra — plus the dvādaśākṣara mantra mislabelled as SB 1.5.37 at 0.30 (same length, different verse).
+
+**Decision**: gate is **0.40 normally, 0.35 when the heard span is ≥40% of the verse's length**. Every correct band match measured 47-84% of its verse length; the false one was 13%. Containment-skip floor moved to 0.35 to match. Result: +4 correct BB verses across these lectures, zero known false positives.
+
+**Still refused, knowingly**: SB 6.17.28 (0.27) and BB 91 (0.25) — correct top-1, too low for any safe scalar gate, because the wrong-verse SB 1.5.37 match sits at 0.30 with a 0.95 length ratio. Reaching those needs the detection classifier (local char n-gram model over corpus positives vs transcript English) or a margin rule — NOT a lower gate.
+
+Tests: `scripts/test-verse-restore.mjs` 32/32 (was 29), incl. the greeting and dvādaśākṣara negatives.

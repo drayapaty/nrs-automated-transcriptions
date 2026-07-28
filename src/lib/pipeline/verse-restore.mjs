@@ -238,8 +238,10 @@ function autoRestoreFromCorpus(md) {
 
     if (best && best.score >= 0.85) { skipped++; continue; }
 
-    // Containment check (correct excerpt, not garbled)
-    if (best && best.score >= 0.40) {
+    // Containment check (correct excerpt, not garbled). Floor is 0.35 to
+    // match the lowest gate below, so a comparable-length match that is
+    // already canonical is still skipped rather than needlessly rewritten.
+    if (best && best.score >= 0.35) {
       const canonGrams = best.entry.text ? ngrams(best.entry.text) : new Set();
       let contained = 0;
       for (const g of q) if (canonGrams.has(g)) contained++;
@@ -247,12 +249,33 @@ function autoRestoreFromCorpus(md) {
       if (containment >= 0.90) { skipped++; continue; }
     }
 
-    // Decide: general match wins if score ≥ 0.40, else try prayer fallback
+    // Length guard (2026-07-28, evidence: scripts/eval-gate.py over 17
+    // transcripts). Lowering the gate alone corrupts transcripts: Mahārāja
+    // says "Hare Kṛṣṇa." as a greeting six times across these lectures, and
+    // that scores 0.35 against the full four-line Mahā-mantra — a 9-char
+    // heard span vs a 68-char verse. Every CORRECT band match was 47-84% of
+    // its verse's length; that false one was 13%. So require comparable
+    // length before trusting a sub-0.40 score.
+    const heardLen = stripDiacritics(garbled).replace(/\s/g, "").length;
+    const verseLen = best?.entry?.text
+      ? stripDiacritics(best.entry.text).replace(/\s/g, "").length
+      : 0;
+    const lengthRatio = verseLen > 0 ? heardLen / verseLen : 0;
+    const longEnough = lengthRatio >= 0.40;
+
+    // Gate: 0.40 outright, or 0.35 when the lengths are comparable. Admits 4
+    // more correct BB verses across these lectures with no known false
+    // positive. Cases at 0.25-0.27 (SB 6.17.28, BB 91) stay refused — a
+    // scalar gate cannot reach them without also admitting wrong-verse
+    // matches of identical length (e.g. the dvādaśākṣara mantra scoring 0.30
+    // against SB 1.5.37). That needs the detection classifier, not a lower gate.
+    const GATE = longEnough ? 0.35 : 0.40;
+
     let matchEntry = null;
     let matchRef = null;
     let matchMethod = null;
 
-    if (best && best.score >= 0.40) {
+    if (best && best.score >= GATE) {
       matchEntry = best.entry;
       matchRef = best.entry.reference ? displayReference(best.entry.reference) : best.key;
       matchMethod = `score ${best.score.toFixed(2)}`;

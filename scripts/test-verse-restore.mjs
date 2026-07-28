@@ -148,5 +148,30 @@ assert("substituted >= 3", stats.substituted >= 3, true);
   }
 }
 
+// ---- length guard + 0.35 gate (2026-07-28) ---------------------------------
+// Evidence: scripts/eval-gate.py over 17 transcripts. A bare gate drop
+// corrupts transcripts — "Hare Kṛṣṇa." (greeting, 9 chars) scores 0.35
+// against the 68-char Mahā-mantra. Correct band matches were 47-84% of their
+// verse length; that one was 13%. So sub-0.40 needs comparable length.
+{
+  const cases = [
+    ["greeting stays a greeting (no Mahā-mantra)",
+     "English lead.\n\nHare Kṛṣṇa.\n\nEnglish after.",
+     (r) => r.stats.substituted === 0],
+    ["BB 83 garble restored at 0.38 (was refused)",
+     "English.\n\nākulīkṛta-guṇa-keśaḥ sva-gopa-śakaḥ kṛṣṇa-pādābja-śauca-jaṁ gaṅgāṁ mūrdhni vahan harṣan\n\nAfter.",
+     (r) => r.stats.substituted === 1],
+    ["dvādaśākṣara mantra not mislabelled SB 1.5.37",
+     "English.\n\noṁ namo bhagavate vāsudevāya oṁ namo bhagavate vāsudevāya oṁ namo bhagavate vāsudevāya\n\nAfter.",
+     (r) => !r.stats.identified_verses.some((v) => v.reference === "SB 1 5.37")],
+  ];
+  for (const [name, md, assert] of cases) {
+    let ok = false;
+    try { ok = assert(restoreVerses(md)); } catch (e) { ok = false; }
+    console.log(`${ok ? "PASS" : "FAIL"}  ${name}`);
+    if (ok) pass++; else fail++;
+  }
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail === 0 ? 0 : 1);
