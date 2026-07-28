@@ -11,6 +11,7 @@
 import {
   looksLikeMangalacarana,
   restoreVerses,
+  extractReferences,
 } from "../src/lib/pipeline/verse-restore.mjs";
 
 let pass = 0;
@@ -114,5 +115,38 @@ assert("BB92 general restore fires", bb92Result.stats.substituted >= 1, true);
 assert("substituted >= 3", stats.substituted >= 3, true);
 
 // ---- Summary ----
+// ---- Śikṣāṣṭaka aliases + named-work tie-break (2026-07-28) ----------------
+// Eight verses added as aliases of CC Antya-līlā 20.x (same text). Ties are
+// exact, so without the NAMED_WORK preference the label would read
+// "CC Antya-līlā 20.21" instead of "Śikṣāṣṭaka 3".
+{
+  const cases = [
+    ["Śikṣāṣṭaka label wins tie",
+     "English lead.\n\ntṛṇādapi sunīcena tarur iva sahiṣṇunam amānina mānadeya kīrtanīyaṁ sadā hariḥ\n\nAfter.",
+     (r) => r.stats.identified_verses.some((v) => v.reference === "Śikṣāṣṭaka 3")],
+    ["genuine CC verse keeps its CC label",
+     "English lead.\n\nkṛṣṇa-varṇaṁ tviṣā kṛṣṇaṁ sāṅgopāṅgāstra-pārṣadaṁ yajñaiḥ saṅkīrtana-prāyair yajanti hi su-medhasaḥ\n\nAfter.",
+     (r) => !r.stats.identified_verses.some((v) => /^Śikṣāṣṭaka/.test(v.reference))],
+    ["spoken 'Śikṣāṣṭaka 3' is extracted",
+     "Maharaja said, in Śikṣāṣṭaka 3, Mahāprabhu teaches humility.",
+     () => extractReferences("in Śikṣāṣṭaka 3, Mahāprabhu").includes("Śikṣāṣṭaka 3")],
+    ["spoken 'Siksastaka verse 8' variant",
+     "x",
+     () => extractReferences("Siksastaka verse 8 says").includes("Śikṣāṣṭaka 8")],
+    ["'Shikshashtakam 1' variant",
+     "x",
+     () => extractReferences("Shikshashtakam 1 begins").includes("Śikṣāṣṭaka 1")],
+    ["no false Śikṣāṣṭaka ref from prose",
+     "x",
+     () => extractReferences("he spoke about the eight verses").length === 0],
+  ];
+  for (const [name, md, assert] of cases) {
+    let ok = false;
+    try { ok = assert(restoreVerses(md)); } catch (e) { ok = false; }
+    console.log(`${ok ? "PASS" : "FAIL"}  ${name}`);
+    if (ok) pass++; else fail++;
+  }
+}
+
 console.log(`\n${pass}/${pass + fail} passed`);
 process.exit(fail === 0 ? 0 : 1);

@@ -70,6 +70,21 @@ function extractReferences(text) {
   }
   const bb = text.match(/Volume\s+(\d+)[,.\s]+Chapter\s+(\d+)[,.\s]+Text\s+(\d+)/i);
   if (bb) refs.push(`BB ${bb[1]}.${bb[2]}.${bb[3]}`);
+  // Named works: Mahāprabhu's eight verses are cited by NAME + verse number
+  // ("Śikṣāṣṭaka 3", "Siksastaka verse 3", "Shikshashtakam 3"), never by a
+  // scripture prefix. Corpus keys are "Śikṣāṣṭaka N" — aliases of the
+  // CC Antya-līlā 20.x entries that hold the same text.
+  // Match on a folded copy: JS \b does not treat "Ś" as a word char, and the
+  // anglicised spelling uses "sh" digraphs ("Shikshashtakam"). Fold diacritics,
+  // then collapse sh→s so every spelling reduces to "siksastaka".
+  const folded = text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/sh/g, "s");
+  for (const m of folded.matchAll(/siksastakam?[^a-z0-9]{0,12}(?:verse\s*)?([1-8])(?![0-9])/g)) {
+    refs.push(`Śikṣāṣṭaka ${m[1]}`);
+  }
   return refs;
 }
 
@@ -133,6 +148,12 @@ function looksLikeMangalacarana(garbled) {
 function displayReference(corpusRef) {
   return REFERENCE_OVERRIDE[corpusRef] || corpusRef;
 }
+
+// Keys that name a work directly rather than by scripture reference. Used to
+// settle exact score ties in favour of the meaningful label (see the match
+// loop in autoRestoreFromCorpus).
+const NAMED_WORK =
+  /^(Śikṣāṣṭaka|Guru-praṇāma|Prabhupāda-praṇāma|Jñāna-cakṣur-praṇāma|Pañca-tattva-mantra|Mahā-mantra|Nṛsiṁha-praṇāma|Bhagavat-namaskāra)\b/;
 
 const COMMON_SUBS = [
   { from: /\bRādhe(-|\s+)Kṛṣṇa\b/g, to: "Hare Kṛṣṇa" },
@@ -205,7 +226,14 @@ function autoRestoreFromCorpus(md) {
     let best = null;
     for (const c of CORPUS_NGRAMS) {
       const s = jaccard(q, c.grams);
-      if (s > (best?.score ?? 0)) best = { score: s, entry: c.entry, key: c.key };
+      // Aliased verses tie EXACTLY (Śikṣāṣṭaka 3 and CC Antya-līlā 20.21 hold
+      // identical text), so iteration order would otherwise decide the label.
+      // On a tie, prefer the named work — that is what Mahārāja said and what
+      // a reader expects in the transcript. A strictly better score still wins.
+      if (!best || s > best.score ||
+          (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key))) {
+        best = { score: s, entry: c.entry, key: c.key };
+      }
     }
 
     if (best && best.score >= 0.85) { skipped++; continue; }

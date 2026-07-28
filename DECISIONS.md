@@ -102,3 +102,17 @@
 **Wiki as a verse source — measured and rejected (2026-07-28)**: the vault's 4,568 verse pages carry trustworthy refs (`section_ref`), which is exactly what the region-derived approach lacked — but only 1,246 contain any Sanskrit, and 1,133 of those are verses already held from Prabhupāda's BBT files. Of the 113 "new" refs, nearly all turned out to be ācārya COMMENTARY quotes with embedded IAST terms, not verse text (e.g. SB 9.24.53 → "Svayam means Kṛṣṇa is not an aṁśa."). The wiki is a commentary index built on top of verse refs, not a verse repository. Only genuine lead: BRS (Bhakti-rasāmṛta-sindhu, 46 pages, Rūpa Gosvāmī — absent from the corpus entirely) — check whether those pages hold verse text before counting on it.
 
 **Standing gap**: the previous ācāryas' own verses are not in machine-readable, correctly-referenced form anywhere in our system. Absent from corpus; wiki holds commentary not verses; book regions give wrong refs. Cheapest real win = Śikṣāṣṭaka (8 verses, quoted in nearly every lecture, absent everywhere) — hand-entered and cross-checked against the corpus's CC copies.
+
+## 2026-07-28 — Śikṣāṣṭaka: aliases + named-work labelling
+
+**Done**: Mahāprabhu's eight verses now exist as corpus keys `Śikṣāṣṭaka 1..8` — ALIASES copying the exact text of CC Antya-līlā 20.12/16/21/29/32/36/39/47 (Prabhupāda's BBT edition). Nothing typed from memory; `scripts/add-siksastaka.py` verifies each source opens with the expected words and refuses to overwrite. Corpus 26,555 → 26,563. Backup: ~/backups/verse-restore/corpus-pre-siksastaka-*.json.
+
+**Tie-break added**: aliased verses score IDENTICALLY, so iteration order decided the label — a Śikṣāṣṭaka quote was being cited as "CC Antya-līlā 20.21". `NAMED_WORK` now wins exact ties (Śikṣāṣṭaka + the praṇāmas/mantras). A strictly better score still wins outright; a genuine CC verse keeps its CC label (tested).
+
+**Spoken references**: `extractReferences()` recognises "Śikṣāṣṭaka 3", "Siksastaka verse 8", "Shikshashtakam 1". Matching is done on a folded copy — JS `\b` does not treat "Ś" as a word char, and the anglicised spelling uses `sh` digraphs, so both forms failed a naive regex.
+
+**Known inert**: `extractReferences()` is exported but NEVER CALLED inside the deterministic module — spoken-reference lookup is not wired into `autoRestoreFromCorpus()`. The function is correct and tested; wiring it (deciding which garble a nearby reference belongs to) is a separate, riskier change.
+
+**Honest scope note**: the aliases add no matching power — the identical CC text already matched (mangled v3 → 0.71 both before and after). What they add is the correct LABEL and a key for spoken references.
+
+Tests: `scripts/test-verse-restore.mjs` 29/29 (was 23).
