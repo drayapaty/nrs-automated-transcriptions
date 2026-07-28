@@ -151,30 +151,92 @@ export async function transcribeWithDeepgramUrl(
   throw lastErr || new Error("Deepgram: max retries exceeded");
 }
 
-// --- MP3 bitrate detection (no external deps, pure header parsing) -----------
+// --- MP3 header parsing (no external deps) -----------------------------------
 //
-// Reads the first valid MPEG audio frame header to determine bitrate, then
-// calculates the byte offset for ~2-min time-based chunks. This lets us do
-// time-based splitting in Vercel (no ffmpeg) by slicing the Buffer.
+// Skips ID3v2 tags and the Xing/Info VBR metadata frame so that bitrate
+// detection reads real audio frames and chunking never sends the Xing header
+// to Groq (which misreads the declared total duration and hangs).
 
 const MPEG1_L3_BITRATES = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
 const MPEG2_L3_BITRATES = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
 
-function detectMp3BitrateKbps(buf: Buffer): number {
-  const limit = Math.min(buf.length - 4, 16384);
-  for (let i = 0; i < limit; i++) {
+function findAudioDataStart(buf: Buffer): number {
+  let offset = 0;
+  if (buf.length >= 10 && buf[0] === 0x49 && buf[1] === 0x44 && buf[2] === 0x33) {
+    offset = ((buf[6] << 21) | (buf[7] << 14) | (buf[8] << 7) | buf[9]) + 10;
+  }
+  const limit = Math.min(buf.length - 4, offset + 16384);
+  for (let i = offset; i < limit; i++) {
+    if (buf[i] !== 0xFF || (buf[i + 1] & 0xE0) !== 0xE0) continue;
+    const versionBits = (buf[i + 1] >> 3) & 0x03;
+    const layerBits = (buf[i + 1] >> 1) & 0x03;
+    const brIdx = (buf[i + 2] >> 4) & 0x0F;
+    if (layerBits !== 0x01 || brIdx === 0 || brIdx === 15) continue;
+    let br = 0;
+    if (versionBits === 0x03) br = MPEG1_L3_BITRATES[brIdx];
+    else if (versionBits === 0x02 || versionBits === 0x00) br = MPEG2_L3_BITRATES[brIdx];
+    if (br <= 0) continue;
+    const sampleRate = versionBits === 0x03 ? 44100 : 22050;
+    const frameLen = Math.floor((144 * br * 1000) / sampleRate);
+    const xingOff = versionBits === 0x03
+      ? (((buf[i + 3] >> 6) & 0x03) === 0x03 ? 21 : 36)
+      : (((buf[i + 3] >> 6) & 0x03) === 0x03 ? 13 : 21);
+    if (i + xingOff + 4 <= buf.length) {
+      const tag = String.fromCharCode(buf[i + xingOff], buf[i + xingOff + 1],
+                                       buf[i + xingOff + 2], buf[i + xingOff + 3]);
+      if (tag === "Xing" || tag === "Info") {
+        return i + frameLen;
+      }
+    }
+    return i;
+  }
+  return offset;
+}
+
+function sampleFramesAt(buf: Buffer, offset: number, maxFrames: number): Record<number, number> {
+  const hits: Record<number, number> = {};
+  let count = 0;
+  const limit = Math.min(buf.length - 4, offset + 65536);
+  for (let i = offset; i < limit && count < maxFrames; i++) {
     if (buf[i] !== 0xFF || (buf[i + 1] & 0xE0) !== 0xE0) continue;
     const versionBits = (buf[i + 1] >> 3) & 0x03;
     const layerBits = (buf[i + 1] >> 1) & 0x03;
     const brIdx = (buf[i + 2] >> 4) & 0x0F;
     if (brIdx === 0 || brIdx === 15) continue;
+    let br = 0;
     if (layerBits === 0x01) {
-      // Layer III
-      if (versionBits === 0x03) return MPEG1_L3_BITRATES[brIdx];   // MPEG1
-      if (versionBits === 0x02 || versionBits === 0x00) return MPEG2_L3_BITRATES[brIdx]; // MPEG2/2.5
+      if (versionBits === 0x03) br = MPEG1_L3_BITRATES[brIdx];
+      else if (versionBits === 0x02 || versionBits === 0x00) br = MPEG2_L3_BITRATES[brIdx];
+    }
+    if (br > 0) {
+      hits[br] = (hits[br] || 0) + 1;
+      count++;
+      const sampleRate = versionBits === 0x03 ? 44100 : 22050;
+      const frameLen = Math.floor((144 * br * 1000) / sampleRate);
+      if (frameLen > 4) i += frameLen - 1;
     }
   }
-  return 64; // safe fallback — yields ~2.8 min chunks at 120s target
+  return hits;
+}
+
+function detectMp3BitrateKbps(buf: Buffer): number {
+  const audioStart = findAudioDataStart(buf);
+  const hits: Record<number, number> = {};
+  const positions = [0.10, 0.40, 0.70].map(p =>
+    Math.max(audioStart, Math.floor(buf.length * p))
+  );
+  for (const pos of positions) {
+    const partial = sampleFramesAt(buf, pos, 10);
+    for (const [br, count] of Object.entries(partial)) {
+      hits[Number(br)] = (hits[Number(br)] || 0) + count;
+    }
+  }
+  if (Object.keys(hits).length === 0) return 128;
+  let best = 128, bestCount = 0;
+  for (const [br, count] of Object.entries(hits)) {
+    if (count > bestCount) { best = Number(br); bestCount = count; }
+  }
+  return best;
 }
 
 // --- Groq Whisper (now PRIMARY for NRS lectures, with 2-min time chunking) ---
@@ -196,10 +258,11 @@ const TARGET_CHUNK_SECS = 120; // 2 minutes — empirically optimal
 export async function transcribeWithGroqChunked(
   audio: Buffer
 ): Promise<TranscriptionResult> {
+  const audioStart = findAudioDataStart(audio);
   const bitrateKbps = detectMp3BitrateKbps(audio);
   const bytesPerSec = (bitrateKbps * 1000) / 8;
   const chunkBytes = Math.floor(bytesPerSec * TARGET_CHUNK_SECS);
-  const estimatedDuration = audio.byteLength / bytesPerSec;
+  const estimatedDuration = (audio.byteLength - audioStart) / bytesPerSec;
 
   // Short audio (< 3 min) — single call is fine
   if (estimatedDuration <= 180) {
@@ -208,7 +271,7 @@ export async function transcribeWithGroqChunked(
   }
 
   const chunks: Buffer[] = [];
-  for (let i = 0; i < audio.byteLength; i += chunkBytes) {
+  for (let i = audioStart; i < audio.byteLength; i += chunkBytes) {
     const end = Math.min(i + chunkBytes, audio.byteLength);
     // Skip tiny tail fragments (< 5s of audio)
     if (end - i < bytesPerSec * 5 && chunks.length > 0) {
