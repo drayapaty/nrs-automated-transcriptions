@@ -36,7 +36,7 @@
 
 **Parked items**
 - Wire verse-restore into the prod orchestrator behind a `restore_verses` flag (currently offline post-processing).
-- Update `RUSSIAN_PROMPT` to the v3 devotee-edited style (above).
+- ~~Update `RUSSIAN_PROMPT` to the v3 devotee-edited style (above).~~ DONE 2026-07-29 — see entry below.
 - Sync the anti-refusal cleanup prompt back into sibling `fetch-lectures.ts`.
 - Fix the stale "Deepgram primary" comment in `transcribe.ts` + README diagram.
 - Groq quota strategy for multi-lecture batches (serial vs Replicate vs self-hosted).
@@ -128,3 +128,13 @@ Tests: `scripts/test-verse-restore.mjs` 29/29 (was 23).
 **Still refused, knowingly**: SB 6.17.28 (0.27) and BB 91 (0.25) — correct top-1, too low for any safe scalar gate, because the wrong-verse SB 1.5.37 match sits at 0.30 with a 0.95 length ratio. Reaching those needs the detection classifier (local char n-gram model over corpus positives vs transcript English) or a margin rule — NOT a lower gate.
 
 Tests: `scripts/test-verse-restore.mjs` 32/32 (was 29), incl. the greeting and dvādaśākṣara negatives.
+
+## 2026-07-29 — `RUSSIAN_PROMPT` updated to the v3 devotee-edited style
+
+**Done**: `src/lib/pipeline/translate.ts` now instructs Cyrillicization of ALL Sanskrit — names, titles and technical terms — with Latin reserved for verse references only. Also encodes the four specific rulings from the 2026-07-16 entry: «обрел милость» (not «получатель милости»), always «святая дхама», «мысли с собой» for takeaway passages, devotional register throughout. Closes the parked item recorded 2026-07-23.
+
+**Deliberate divergence**: the prompt no longer mirrors `demo-pipeline.ts` in ask-niranjana-swami, which still carries the old keep-IAST rule. The file header now says so explicitly so nobody "resyncs" it back. This is the first intentional break in the copied-prompt lineage — the sibling should be updated to match, not the reverse.
+
+**Ukrainian NOT changed**: `UKRAINIAN_PROMPT` still says keep-IAST. The 2026-07-16 ruling covers Russian only; no devotee-edited Ukrainian style exists. Guessing a Cyrillicization scheme for Ukrainian would be inventing a style ruling, which is not ours to make. Open question for Śrī Rādhā / the Ukrainian editor.
+
+**Known tail**: every Russian transcript produced between 2026-07-16 and today was generated with the outdated prompt and is in the wrong style. Not yet decided whether those get retranslated — `nrs-lectures-auto-transcribe` holds them keyed `{uuid}_ru`, and re-running translation is idempotent on those IDs.
