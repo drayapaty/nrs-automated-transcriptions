@@ -8,6 +8,8 @@
  * Tools:
  *   transcribe_youtube  — download + transcribe + cleanup + verse-restore
  *   transcribe_file     — same pipeline from a local audio file
+ *   transcribe_url      — same pipeline from S3/direct URL
+ *   translate_russian   — translate a transcript file to Russian
  *
  * Install in Claude Desktop:
  *   ~/Library/Application Support/Claude/claude_desktop_config.json:
@@ -35,6 +37,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_SCRIPT = join(__dirname, "scripts", "transcribe-cli.ts");
+const TRANSLATE_SCRIPT = join(__dirname, "scripts", "translate-cli.ts");
 
 function runCli(input) {
   const output = execSync(`npx tsx "${CLI_SCRIPT}" "${input}"`, {
@@ -94,6 +97,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: "translate_russian",
+      description:
+        "Translate an English transcript file to Russian. Uses Claude with Gaudiya Vaishnava conventions. Outputs a _ru.md file next to the input. Takes 1-3 minutes per transcript.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Absolute path to the English transcript .md file (typically the _restored.md or _cleaned.md output from transcription)",
+          },
+        },
+        required: ["path"],
+      },
+    },
+    {
       name: "transcribe_url",
       description:
         "Transcribe an audio file from a URL (S3, direct link, etc.). Downloads the audio, re-encodes for Groq compatibility, then runs Groq Whisper transcription, Sonnet IAST cleanup, and deterministic verse restoration. Saves raw/cleaned/restored .md files to ~/Downloads/. Takes 5-7 minutes for a 1-hour lecture.",
@@ -130,6 +148,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: "Missing file path" }] };
       }
       const output = runCli(filePath);
+      return { content: [{ type: "text", text: output }] };
+    }
+
+    if (name === "translate_russian") {
+      const filePath = args.path;
+      if (!filePath) {
+        return { content: [{ type: "text", text: "Missing file path" }] };
+      }
+      const output = execSync(`npx tsx "${TRANSLATE_SCRIPT}" "${filePath}" ru`, {
+        encoding: "utf-8",
+        cwd: __dirname,
+        timeout: 900_000,
+        maxBuffer: 10 * 1024 * 1024,
+      });
       return { content: [{ type: "text", text: output }] };
     }
 
