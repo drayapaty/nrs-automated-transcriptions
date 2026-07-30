@@ -29,6 +29,8 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
+import { mkdtempSync, unlinkSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -42,6 +44,16 @@ function runCli(input) {
     maxBuffer: 10 * 1024 * 1024,
   });
   return output;
+}
+
+function downloadAndReencode(url) {
+  const tmp = mkdtempSync(join(tmpdir(), "nrs-url-"));
+  const slug = url.replace(/.*\//, "").replace(/[^a-z0-9._-]/gi, "_").slice(0, 80);
+  const rawPath = join(tmp, slug);
+  const monoPath = join(tmp, slug.replace(/\.[^.]+$/, "_mono.mp3"));
+  execSync(`curl -sL "${url}" -o "${rawPath}"`, { timeout: 300_000 });
+  execSync(`ffmpeg -y -i "${rawPath}" -ac 1 -ar 16000 -b:a 128k "${monoPath}" 2>/dev/null`, { timeout: 300_000 });
+  return { monoPath, cleanup: () => { try { unlinkSync(rawPath); unlinkSync(monoPath); } catch {} } };
 }
 
 const server = new Server(
@@ -81,6 +93,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["path"],
       },
     },
+    {
+      name: "transcribe_url",
+      description:
+        "Transcribe an audio file from a URL (S3, direct link, etc.). Downloads the audio, re-encodes for Groq compatibility, then runs Groq Whisper transcription, Sonnet IAST cleanup, and deterministic verse restoration. Saves raw/cleaned/restored .md files to ~/Downloads/. Takes 5-7 minutes for a 1-hour lecture.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          url: {
+            type: "string",
+            description: "Direct URL to an audio file (MP3/WAV/M4A). Works with S3 presigned URLs, direct download links, etc.",
+          },
+        },
+        required: ["url"],
+      },
+    },
   ],
 }));
 
@@ -104,6 +131,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
       const output = runCli(filePath);
       return { content: [{ type: "text", text: output }] };
+    }
+
+    if (name === "transcribe_url") {
+      const url = args.url;
+      if (!url || !url.startsWith("http")) {
+        return { content: [{ type: "text", text: "Invalid URL — must start with http(s)://" }] };
+      }
+      const { monoPath, cleanup } = downloadAndReencode(url);
+      try {
+        const output = runCli(monoPath);
+        return { content: [{ type: "text", text: output }] };
+      } finally {
+        cleanup();
+      }
     }
 
     return { content: [{ type: "text", text: `Unknown tool: ${name}` }] };
