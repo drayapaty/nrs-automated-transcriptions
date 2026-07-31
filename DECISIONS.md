@@ -127,6 +127,24 @@
 
 Tests: `scripts/test-verse-restore.mjs` 29/29 (was 23).
 
+## 2026-07-31 — corpus.json: BB 1.2.30-36 + Padma Purāṇa + Śruti verse added
+
+BB 1.2.30-36 (7 verses) were missing due to flat-key collision — "BB 30" matched Chapter 1 verse 30 not Chapter 2. Added with explicit "BB 1.2.N" keys. Also added Padma Purāṇa nāmāparādha verse (score 0.66) and Śruti "brahmaṇā saha" verse (score 0.78). Total corpus: 26,564 entries.
+
+## 2026-07-31 — verse-restore.mjs: `[unverified citation]` tag path + isVerseLine fix
+
+Two improvements from BB retranscription batch:
+
+1. **`isVerseLine` word-boundary fix**: `\b` in JS matches inside hyphenated Sanskrit compounds (`jñāna-karmādy-anāvṛtam` → false `\ban\b` hit). Switched to whitespace-split + Set lookup. Eliminates false English detection on compound Sanskrit lines.
+
+2. **`[unverified citation]` tag matching**: new secondary entry in `autoRestoreFromCorpus()` — when Sonnet's cleanup stage already flagged a garbled verse with `[unverified citation]`, gather lines below the tag as a verse block (even if `isVerseLine` fails) and try corpus matching at 0.30 threshold (lower than the 0.40 general gate, justified because the tag is high-confidence signal that a verse IS present).
+
+## 2026-07-31 — Transcript tagging: Bengali songs + Whisper artifacts
+
+Garbled Bengali songs/kīrtana that cannot be corpus-matched get `[Bengali kīrtana — audio unclear]` or `[Bengali bhajan — Gaurāṅga prayer, audio unclear]` instead of `[unverified citation]`. Whisper hallucination loops (repetitive syllable artifacts) get `[closing kīrtana — Whisper transcription artifact]`. Speaker's own admission of mis-recollection gets `[speaker's incomplete recollection]`. These tags are more informative than generic `[unverified citation]` and don't imply a fixable verse.
+
+---
+
 ## 2026-07-28 — Match gate: 0.35 WITH a length guard, not a bare gate drop
 
 **Rejected first**: swapping the metric. Compared jaccard / dice / containment / lcs_ratio on 9 hand-labelled real garbles (`scripts/eval-metric.py`). Dice is Jaccard rescaled (Dice = 2J/(1+J)) — identical ranking, adds nothing. Containment (5/7) and lcs_ratio (3/7) are WORSE: lcs matched the English sentence "And so the devotees were very much pleased" to SB 12.2.12 at 0.79. Current metric already ranks the correct verse top-1 in 7/7. **The metric was never the problem; the gate was.**

@@ -190,12 +190,21 @@ function restoreLectureOpening(md) {
   return { text: md, fixed: false };
 }
 
+const ENG_STOPS = new Set([
+  "the","is","of","and","to","that","this","for","with","not","are","was",
+  "but","has","had","his","her","can","our","how","who","we","he","she",
+  "it","do","if","so","as","by","at","in","on","or","an","no",
+]);
+
 function isVerseLine(line) {
   const trimmed = line.trim();
   if (!trimmed || trimmed.length < 10) return false;
   if (/[Ѐ-ӿ]/.test(trimmed)) return false;
-  const engWords = (trimmed.match(/\b(the|is|of|and|to|that|this|for|with|not|are|was|but|has|had|his|her|can|our|how|who|we|he|she|it|do|if|so|as|by|at|in|on|or|an|no)\b/gi) || []).length;
-  const words = trimmed.split(/\s+/).length;
+  // Split on whitespace only — \b matches inside hyphenated Sanskrit
+  // compounds ("jñāna-karmādy-anāvṛtam" → false \ban\b hit).
+  const tokens = trimmed.split(/\s+/);
+  const words = tokens.length;
+  const engWords = tokens.filter(t => ENG_STOPS.has(t.toLowerCase())).length;
   if (engWords / words >= 0.15) return false;
   const iastChars = (trimmed.match(/[āīūṛḷṅñṭḍṇśṣḥṁ]/g) || []).length;
   return iastChars >= 3 && iastChars / words >= 0.4;
@@ -209,6 +218,53 @@ function autoRestoreFromCorpus(md) {
 
   let i = 0;
   while (i < lines.length) {
+    // Secondary entry: [unverified citation] tag — gather lines below it
+    // as a verse block even if isVerseLine fails (covers low-IAST or ASCII
+    // garbles that Sonnet already flagged).
+    if (/\[unverified citation\]/i.test(lines[i])) {
+      const tagIdx = i;
+      i++;
+      const verseLines = [];
+      while (i < lines.length && lines[i].trim() &&
+             !lines[i].startsWith("[") &&
+             !/^(Commentary|That |So |And |This |He |She |We |The |In |But |For |As |It |They |Which |What |Where |When |How )/.test(lines[i])) {
+        verseLines.push(lines[i].trim());
+        i++;
+      }
+      if (verseLines.length > 0) {
+        const garbled = verseLines.join(" ");
+        const q = ngrams(garbled);
+        let best = null;
+        for (const c of CORPUS_NGRAMS) {
+          const s = jaccard(q, c.grams);
+          if (!best || s > best.score ||
+              (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key))) {
+            best = { score: s, entry: c.entry, key: c.key };
+          }
+        }
+        if (best && best.score >= 0.30) {
+          const ref = best.entry.reference ? displayReference(best.entry.reference) : best.key;
+          // Replace tag + garbled verse with canonical text + reference
+          const canonical = best.entry.text.split(/\r?\n/);
+          canonical.push(`(${ref})`);
+          const label = best.score >= 0.85 ? "cite-only" : "auto-restore";
+          console.log(`  ${label}: "${verseLines[0].slice(0, 60)}…" → ${ref} (score ${best.score.toFixed(2)}, via [unverified])`);
+          identified.push({ reference: best.entry.reference || ref, score: best.score });
+          if (best.score >= 0.85) {
+            // Already canonical — just replace tag with reference
+            lines[tagIdx] = `(${ref})`;
+          } else {
+            // Garbled — replace tag + verse with canonical
+            lines.splice(tagIdx, i - tagIdx, ...canonical);
+            i = tagIdx + canonical.length;
+            restored++;
+          }
+          continue;
+        }
+      }
+      continue;
+    }
+
     if (!isVerseLine(lines[i])) { i++; continue; }
 
     const verseStart = i;
@@ -236,7 +292,17 @@ function autoRestoreFromCorpus(md) {
       }
     }
 
-    if (best && best.score >= 0.85) { skipped++; continue; }
+    if (best && best.score >= 0.85) {
+      // Verse is already canonical — don't rewrite, but resolve any
+      // [unverified citation] tag above it with the matched reference.
+      if (verseStart > 0 && /\[unverified citation\]/i.test(lines[verseStart - 1])) {
+        const ref = best.entry.reference ? displayReference(best.entry.reference) : best.key;
+        lines[verseStart - 1] = `(${ref})`;
+        console.log(`  cite-only: "${verseLines[0].slice(0, 60)}…" → ${ref} (score ${best.score.toFixed(2)})`);
+        identified.push({ reference: best.entry.reference || ref, score: best.score });
+      }
+      skipped++; continue;
+    }
 
     // Containment check (correct excerpt, not garbled). Floor is 0.35 to
     // match the lowest gate below, so a comparable-length match that is
@@ -246,7 +312,16 @@ function autoRestoreFromCorpus(md) {
       let contained = 0;
       for (const g of q) if (canonGrams.has(g)) contained++;
       const containment = q.size > 0 ? contained / q.size : 0;
-      if (containment >= 0.90) { skipped++; continue; }
+      if (containment >= 0.90) {
+        // Same cite-only fix for containment skip
+        if (verseStart > 0 && /\[unverified citation\]/i.test(lines[verseStart - 1])) {
+          const ref = best.entry.reference ? displayReference(best.entry.reference) : best.key;
+          lines[verseStart - 1] = `(${ref})`;
+          console.log(`  cite-only: "${verseLines[0].slice(0, 60)}…" → ${ref} (score ${best.score.toFixed(2)})`);
+          identified.push({ reference: best.entry.reference || ref, score: best.score });
+        }
+        skipped++; continue;
+      }
     }
 
     // Length guard (2026-07-28, evidence: scripts/eval-gate.py over 17
