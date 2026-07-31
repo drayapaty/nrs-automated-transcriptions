@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-07-30 — conversation pipeline + cleanup fix
+
+**Conversation/diarization pipeline** — productionized as MCP tool `transcribe_conversation`. Architecture: Groq Whisper (word-level timestamps, IAST quality) + Deepgram nova-2 (speaker labels) run in parallel, merged by timestamp alignment, then Sonnet IAST cleanup + verse-restore. Requires `DEEPGRAM_API_KEY`.
+
+**Praṇāma restoration restricted to opening only** — cleanup prompt rule #2 was over-applying, inserting Prabhupāda-praṇāma mid-transcript when Sonnet encountered garbled Sanskrit. Fixed: rule now explicitly scoped to first 2-3 paragraphs only; mid-lecture garble handled by rules 4/8 instead.
+
+**Default model updated** — `clients.ts` default changed from `claude-sonnet-4-5` (deprecated) to `claude-sonnet-4-6`.
+
+---
+
 ## 2026-07-23 — seeded from README.md, PIPELINE.md + memory
 
 **Scope**

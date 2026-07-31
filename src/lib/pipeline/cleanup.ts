@@ -24,9 +24,11 @@ Fix these issues — do NOT change the English content, sentence structure, or m
    Apply these consistently — if the speaker says "Bhagavatam", write "Bhāgavatam"; if he says "Krishna", write "Kṛṣṇa"; if he says "Mayapur", write "Māyāpura". This applies to every occurrence in the narrative, not just the first.
 
    Borrowings already common in English keep their ASCII forms: "devotee", "devotional", "spiritual", "holy", "Lord", "verse", "chapter", "transcendental".
-2. MANGALA-CARANA OPENING PRAYERS: A Gauḍīya class almost always opens with one or more Sanskrit praṇāma / maṅgalācaraṇa prayers recited rapidly before the English begins. The Deepgram English model typically garbles them into nonsense ("oh hum a ginyan timur an dhasya", "Hari Krishna Hari Krishna", "namo om vish nu padaya"…). DO NOT drop these as hallucinations under rule 4. Always preserve them as the very first paragraphs of the transcript, even when partially mangled.
+2. MANGALA-CARANA OPENING PRAYERS (FIRST 3 PARAGRAPHS ONLY): A Gauḍīya class almost always opens with one or more Sanskrit praṇāma / maṅgalācaraṇa prayers recited rapidly before the English begins. The Deepgram English model typically garbles them into nonsense ("oh hum a ginyan timur an dhasya", "Hari Krishna Hari Krishna", "namo om vish nu padaya"…). DO NOT drop these as hallucinations under rule 4. Always preserve them as the very first paragraphs of the transcript, even when partially mangled.
 
-   Identify and restore the canonical IAST form when the garble matches one of these common openings:
+   CRITICAL: This rule applies ONLY to the very beginning of the transcript (the first 2-3 paragraphs, before English speech begins). Do NOT insert or restore praṇāma mantras anywhere else in the transcript. If garbled text appears mid-lecture, treat it under rule 8 (preserve Sanskrit verses) or rule 4 (remove hallucinations) — NOT this rule.
+
+   Identify and restore the canonical IAST form when the garble matches one of these common openings AND appears at the start of the transcript:
 
    Prabhupāda-praṇāma (almost always first):
        nama oṁ viṣṇu-pādāya kṛṣṇa-preṣṭhāya bhū-tale

@@ -9,6 +9,7 @@
  *   transcribe_youtube  — download + transcribe + cleanup + verse-restore
  *   transcribe_file     — same pipeline from a local audio file
  *   transcribe_url      — same pipeline from S3/direct URL
+ *   transcribe_conversation — multi-speaker diarized transcription
  *   translate_russian   — translate a transcript file to Russian
  *
  * Install in Claude Desktop:
@@ -37,6 +38,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_SCRIPT = join(__dirname, "scripts", "transcribe-cli.ts");
+const CONVERSATION_SCRIPT = join(__dirname, "scripts", "transcribe-conversation-cli.ts");
 const TRANSLATE_SCRIPT = join(__dirname, "scripts", "translate-cli.ts");
 
 function runCli(input) {
@@ -126,6 +128,28 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         required: ["url"],
       },
     },
+    {
+      name: "transcribe_conversation",
+      description:
+        "Transcribe a multi-speaker conversation or interview. Uses Groq Whisper for text quality and Deepgram for speaker diarization (who said what), then Sonnet IAST cleanup and verse restoration. Saves diarized_raw/diarized_cleaned/diarized_restored .md files to ~/Downloads/. Takes 7-12 minutes for a 1-hour recording. Requires DEEPGRAM_API_KEY.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Absolute path to the audio file (MP3/WAV/M4A)",
+          },
+          url: {
+            type: "string",
+            description: "URL to download audio from (S3, direct link). Use this OR path, not both.",
+          },
+          speakers: {
+            type: "string",
+            description: 'Optional speaker name mapping. Format: "0:H.H. Niranjana Swami,1:H.H. Dhanurdhara Swami,2:Devotee". Speaker numbers are assigned by Deepgram (usually 0-based). If omitted, speakers are labeled Speaker 0, Speaker 1, etc.',
+          },
+        },
+      },
+    },
   ],
 }));
 
@@ -176,6 +200,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         return { content: [{ type: "text", text: output }] };
       } finally {
         cleanup();
+      }
+    }
+
+    if (name === "transcribe_conversation") {
+      let audioPath = args.path;
+      let cleanupFn = null;
+
+      if (!audioPath && args.url) {
+        if (!args.url.startsWith("http")) {
+          return { content: [{ type: "text", text: "Invalid URL — must start with http(s)://" }] };
+        }
+        const dl = downloadAndReencode(args.url);
+        audioPath = dl.monoPath;
+        cleanupFn = dl.cleanup;
+      }
+
+      if (!audioPath) {
+        return { content: [{ type: "text", text: "Provide either path or url" }] };
+      }
+
+      try {
+        const speakersArg = args.speakers ? `--speakers "${args.speakers}"` : "";
+        const output = execSync(
+          `npx tsx "${CONVERSATION_SCRIPT}" "${audioPath}" ${speakersArg}`,
+          {
+            encoding: "utf-8",
+            cwd: __dirname,
+            timeout: 1_800_000,
+            maxBuffer: 10 * 1024 * 1024,
+          }
+        );
+        return { content: [{ type: "text", text: output }] };
+      } finally {
+        if (cleanupFn) cleanupFn();
       }
     }
 

@@ -40,6 +40,12 @@ export function groqKeys(): string[] {
     process.env.GROQ_API_KEY_2,
     process.env.GROQ_API_KEY_3,
     process.env.GROQ_API_KEY_4,
+    process.env.GROQ_API_KEY_5,
+    process.env.GROQ_API_KEY_6,
+    process.env.GROQ_API_KEY_7,
+    process.env.GROQ_API_KEY_8,
+    process.env.GROQ_API_KEY_9,
+    process.env.GROQ_API_KEY_10,
   ].filter((k): k is string => !!k);
 }
 
@@ -95,4 +101,4 @@ export function dynamo(): DynamoDBDocumentClient {
 
 export const TABLE_JOBS = process.env.DYNAMODB_TABLE_JOBS || "nrs-transcribe-jobs";
 
-export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-5";
+export const CLAUDE_MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-6";
