@@ -156,3 +156,11 @@ Garbled Bengali songs/kīrtana that cannot be corpus-matched get `[Bengali kīrt
 **Still refused, knowingly**: SB 6.17.28 (0.27) and BB 91 (0.25) — correct top-1, too low for any safe scalar gate, because the wrong-verse SB 1.5.37 match sits at 0.30 with a 0.95 length ratio. Reaching those needs the detection classifier (local char n-gram model over corpus positives vs transcript English) or a margin rule — NOT a lower gate.
 
 Tests: `scripts/test-verse-restore.mjs` 32/32 (was 29), incl. the greeting and dvādaśākṣara negatives.
+
+## 2026-08-01 — Cleanup chunking: praṇāma hallucination root cause + fix
+
+**Root cause**: `cleanupTranscript()` splits raw text into ~12K-char chunks at sentence boundaries and sends each independently to Claude. The cleanup prompt's Rule 2 ("restore canonical praṇāma at transcript opening") fires on EVERY chunk because each looks like a standalone transcript. Result: fabricated praṇāma prayer blocks at every chunk boundary mid-lecture. 15 of 35 BB files affected (all files > 12K raw chars). Raw Whisper output contains ZERO praṇāma text — 100% LLM fabrication.
+
+**Fix**: pass chunk index to the prompt. Chunks 2+ get a continuation preamble telling the LLM NOT to apply Rule 2. Only chunk 1 (actual transcript start) gets the opening-prayer restoration.
+
+**Decision**: fix the pipeline first, then re-run all affected files through the corrected pipeline. Do NOT manually patch existing transcripts — full re-run preferred for consistency.
