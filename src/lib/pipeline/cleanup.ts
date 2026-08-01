@@ -24,11 +24,11 @@ Fix these issues — do NOT change the English content, sentence structure, or m
    Apply these consistently — if the speaker says "Bhagavatam", write "Bhāgavatam"; if he says "Krishna", write "Kṛṣṇa"; if he says "Mayapur", write "Māyāpura". This applies to every occurrence in the narrative, not just the first.
 
    Borrowings already common in English keep their ASCII forms: "devotee", "devotional", "spiritual", "holy", "Lord", "verse", "chapter", "transcendental".
-2. MANGALA-CARANA OPENING PRAYERS (FIRST 3 PARAGRAPHS ONLY): A Gauḍīya class almost always opens with one or more Sanskrit praṇāma / maṅgalācaraṇa prayers recited rapidly before the English begins. The Deepgram English model typically garbles them into nonsense ("oh hum a ginyan timur an dhasya", "Hari Krishna Hari Krishna", "namo om vish nu padaya"…). DO NOT drop these as hallucinations under rule 4. Always preserve them as the very first paragraphs of the transcript, even when partially mangled.
+2. PRAṆĀMA / MAṄGALĀCARAṆA PRAYERS — PRESERVE IN PLACE: The speaker recites Sanskrit praṇāma prayers at some point during the lecture — sometimes at the very beginning, sometimes after a greeting, sometimes well into the talk. The Whisper/Deepgram English model typically garbles them into nonsense ("oh hum a ginyan timur an dhasya", "Hari Krishna Hari Krishna", "namo om vish nu padaya"…). DO NOT drop these as hallucinations under rule 4. Preserve them IN THE SAME POSITION they appear in the raw transcript — do NOT move them to the beginning or anywhere else.
 
-   CRITICAL: This rule applies ONLY to the very beginning of the transcript (the first 2-3 paragraphs, before English speech begins). Do NOT insert or restore praṇāma mantras anywhere else in the transcript. If garbled text appears mid-lecture, treat it under rule 8 (preserve Sanskrit verses) or rule 4 (remove hallucinations) — NOT this rule.
+   CRITICAL: Do NOT fabricate or insert praṇāma mantras that are not present in the input text. Only restore garbled text that is ALREADY THERE. If no garbled prayer text exists in the input, do NOT add prayers. Preserve the speaker's actual order: if the greeting comes before the prayers in the input, keep that order in the output.
 
-   Identify and restore the canonical IAST form when the garble matches one of these common openings AND appears at the start of the transcript:
+   Identify and restore the canonical IAST form when the garble matches one of these common prayers:
 
    Prabhupāda-praṇāma (almost always first):
        nama oṁ viṣṇu-pādāya kṛṣṇa-preṣṭhāya bhū-tale
@@ -48,6 +48,16 @@ Fix these issues — do NOT change the English content, sentence structure, or m
    Mahā-mantra (when chanted):
        Hare Kṛṣṇa Hare Kṛṣṇa Kṛṣṇa Kṛṣṇa Hare Hare
        Hare Rāma Hare Rāma Rāma Rāma Hare Hare
+
+   Rādhā-praṇāma:
+       tapta-kāñcana-gaurāṅgi rādhe vṛndāvaneśvari
+       vṛṣabhānu-sute devi praṇamāmi hari-priye
+
+   Bhagavat-namaskāra (often repeated 3 times):
+       oṁ namo bhagavate vāsudevāya
+
+   Vyāsa-namaskāra (sometimes used for Bṛhad-bhāgavatāmṛta classes):
+       oṁ namo bhagavate vyāsadevāya
 
    If garble clearly matches one of the above, output the canonical IAST verse on its own paragraph. If it only partially matches or is unidentifiable, preserve what the transcript said (do NOT delete) and tag with [unverified citation] on a line above it.
 
@@ -146,7 +156,7 @@ async function cleanupChunk(
 ): Promise<string> {
   const continuationPreamble = isContinuation
     ? `IMPORTANT: This is a CONTINUATION chunk of a longer transcript, NOT the beginning. ` +
-      `Rule 2 (maṅgalācaraṇa opening prayers) does NOT apply — do NOT insert or restore ` +
+      `Rule 2 (praṇāma prayers) does NOT apply — do NOT insert, restore, or fabricate ` +
       `praṇāma mantras. Only preserve Sanskrit verses that are already present in the input text.\n\n`
     : "";
 

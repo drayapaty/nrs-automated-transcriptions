@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-08-01 — Pipeline repeatability: 4 fixes from BB retranscription audit
+
+Manual quality review of 35 BB lecture transcripts revealed 4 pipeline gaps where human intervention was needed. All 4 fixed so the pipeline produces the same quality automatically.
+
+**Fix 1 — Cleanup prompt Rule 2: preserve prayers IN PLACE, don't hoist** (`cleanup.ts`)
+Root cause of prayer-positioning bug across 16 files. Old prompt said "Always preserve them as the very first paragraphs." Now says: preserve prayers WHERE they appear, do NOT move or fabricate. Speaker's actual order (greeting → prayers) is preserved.
+
+**Fix 2 — Liturgy corpus expansion** (`corpus.json`, `verse-restore.mjs`)
+Added Rādhā-praṇāma, Bhagavat-namaskāra (`oṁ namo bhagavate vāsudevāya`), Vyāsa-namaskāra (`oṁ namo bhagavate vyāsadevāya`) to corpus + exact-string probes in `looksLikeMangalacarana()`. NAMED_WORK regex updated. Corpus 26,585 → 26,588.
+
+**Fix 3 — Auto-tag unmatched verse blocks** (`verse-restore.mjs`)
+When `isVerseLine()` detects a verse block but no corpus or prayer match, insert `[unverified citation]` above it. Guard against `isVerseLine` false positives (greetings with IAST names): only tags multi-line blocks OR single-line with corpus score ≥ 0.20.
+
+**Fix 4 — Cleanup prompt: expanded prayer reference list** (`cleanup.ts`)
+Added Rādhā-praṇāma, Bhagavat-namaskāra, Vyāsa-namaskāra to the prompt's canonical prayer list so Sonnet can recognise and restore them.
+
+Tests: `scripts/test-verse-restore.mjs` 32/32. `tsc --noEmit` clean.
+
+**Standing gap**: BB-specific verses manually restored via MCP (23 of 35 blocks) are NOT yet in the corpus. The corpus has 493 BB entries but not every verse Maharaja quotes in these lectures. A targeted corpus import from the vedic-scriptures MCP for the specific BB verses referenced in these 35 lectures would close this gap.
+
+---
+
 ## 2026-07-30 — conversation pipeline + cleanup fix
 
 **Conversation/diarization pipeline** — productionized as MCP tool `transcribe_conversation`. Architecture: Groq Whisper (word-level timestamps, IAST quality) + Deepgram nova-2 (speaker labels) run in parallel, merged by timestamp alignment, then Sonnet IAST cleanup + verse-restore. Requires `DEEPGRAM_API_KEY`.

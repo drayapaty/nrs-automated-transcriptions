@@ -110,6 +110,12 @@ function looksLikeMangalacarana(garbled) {
     ["namastenarasimhaya", "Nṛsiṁha-praṇāma"],
     ["śrīkṛṣṇacaitanya", "Pañca-tattva-mantra"],
     ["srikrishnacaitanya", "Pañca-tattva-mantra"],
+    ["taptakāñcanagaurāṅgi", "Rādhā-praṇāma"],
+    ["taptakanchanagaurangi", "Rādhā-praṇāma"],
+    ["vṛṣabhānu", "Rādhā-praṇāma"],
+    ["vrishabhanusute", "Rādhā-praṇāma"],
+    ["oṁnamobhagavatevyāsadevāya", "Vyāsa-namaskāra"],
+    ["oṁnamobhagavatevyasadevaya", "Vyāsa-namaskāra"],
   ];
   for (const [needle, key] of probes) {
     if (flat.includes(needle)) return key;
@@ -153,7 +159,7 @@ function displayReference(corpusRef) {
 // settle exact score ties in favour of the meaningful label (see the match
 // loop in autoRestoreFromCorpus).
 const NAMED_WORK =
-  /^(Śikṣāṣṭaka|Guru-praṇāma|Prabhupāda-praṇāma|Jñāna-cakṣur-praṇāma|Pañca-tattva-mantra|Mahā-mantra|Nṛsiṁha-praṇāma|Bhagavat-namaskāra)\b/;
+  /^(Śikṣāṣṭaka|Guru-praṇāma|Prabhupāda-praṇāma|Jñāna-cakṣur-praṇāma|Pañca-tattva-mantra|Mahā-mantra|Nṛsiṁha-praṇāma|Bhagavat-namaskāra|Rādhā-praṇāma|Vyāsa-namaskāra)\b/;
 
 const COMMON_SUBS = [
   { from: /\bRādhe(-|\s+)Kṛṣṇa\b/g, to: "Hare Kṛṣṇa" },
@@ -365,7 +371,19 @@ function autoRestoreFromCorpus(md) {
       }
     }
 
-    if (!matchEntry) continue;
+    if (!matchEntry) {
+      // No corpus or prayer match — auto-tag for manual review unless
+      // already tagged by upstream cleanup. Guard against isVerseLine
+      // false positives (single-line greetings with IAST names) by
+      // requiring multi-line OR a meaningful corpus score.
+      const shouldTag = verseLines.length >= 2 || (best && best.score >= 0.20);
+      if (shouldTag && (verseStart === 0 || !/\[unverified citation\]/i.test(lines[verseStart - 1]))) {
+        lines.splice(verseStart, 0, "[unverified citation]");
+        i = verseStart + 1 + verseLines.length;
+        console.log(`  auto-tag: "${verseLines[0].slice(0, 60)}…" (best score ${best?.score?.toFixed(2) ?? "none"})`);
+      }
+      continue;
+    }
 
     let spliceStart = verseStart;
     if (verseStart > 0 && /\[unverified citation\]/i.test(lines[verseStart - 1])) {
