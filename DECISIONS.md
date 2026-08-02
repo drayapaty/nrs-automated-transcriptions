@@ -4,6 +4,43 @@
 
 ---
 
+## 2026-08-02 — Zoom-class distribution pipeline: architecture (in progress)
+
+New pipeline for Mahārāja's Zoom classes: given the raw audio file (however it's obtained — out of scope), fan it out to two destinations automatically.
+
+**Decisions so far:**
+- **Evernote delivery = email, not API.** Evernote's public API dev-token program has been closed to new developers for years; the pragmatic path is Evernote's per-account "email this note" address (`username.xxxxx@m.evernote.com`) — mailing to it auto-creates a note.
+- **Evernote email = a LINK, not an attachment.** Superseded the original "attach the raw audio" plan same day: SES hard-caps raw messages at 10 MB, and a real class recording is 40-100+ MB (measured: 61.2 MB for a 67-min mp3 @128kbps during the gpt-4o-transcribe test). Most mail gateways cap attachments around 25 MB regardless. Fix: upload audio to S3 first (reuse the presigned-URL flow already used for `/api/jobs`), email Evernote a note body containing a download link. `src/lib/email.ts`'s raw-MIME SES sender is still reused, just for a text/HTML body instead of a binary attachment.
+- **Evernote generates its own summary** — not our concern. We only need to deliver the raw audio there.
+- **Transcription leg calls the LOCAL pipeline already installed on Mahārāja's Mac** (the Claude Desktop MCP server, `mcp-server.mjs`, per `SETUP-CLAUDE-DESKTOP.md`) — NOT the remote `/api/jobs` Vercel endpoint. Reuse the same local functions `transcribe-cli.ts` already calls (`transcribeWithGroqChunked` → `cleanupTranscript` → `restoreVerses`).
+- **Trigger**: a person hands off the local audio file (manual/CLI, matching the existing "paste a file path into Claude Desktop" pattern) — not a fully-automatic webhook. Not revisited unless asked.
+
+**Blocked on**: Mahārāja's Evernote note-email address (need to ask him). No code written yet — architecture only.
+
+## 2026-08-01 — corpus-seeds.json for non-auto-generated verses
+
+`corpus-seeds.json` at repo root holds hand-curated verses NOT covered by the auto-generated corpus (non-BBT sources like Padma Purāṇa, plus BB verses whose flat-key mapping misses them). Merged at load time in verse-restore.mjs — seed entries always win over auto-generated ones. Add new non-BBT/non-standard verses here; never hand-edit corpus.json.
+
+## 2026-08-01 — Post-cleanup praṇāma stripper (deterministic, no LLM)
+
+New pipeline stage between cleanup and verse-restore: `strip-fabricated-pranama.ts`.
+
+**Problem**: Sonnet sees garbled Sanskrit in raw Whisper output (often BB verse fragments) and "helpfully" reconstitutes them as full guru-praṇāma sets. This is non-deterministic — sometimes it fabricates, sometimes not.
+
+**Solution**: Deterministic post-pass compares ASCII-folded raw Whisper text against cleaned output using fuzzy regex probes. If raw has NO guru-praṇāma markers → strip ALL guru-praṇāma from cleaned. If raw has markers → keep first merged block, strip duplicates.
+
+**Key design decisions**:
+- `asciiFold()` normalizes IAST diacritics (ā→a, ṣ→s, ṇ→n) before probe matching — Whisper sometimes outputs partial IAST that breaks ASCII-only probes
+- `isContinuationLine()` treats `[bracketed tags]` and `(parentheticals)` as transparent within praṇāma blocks — Sonnet inserts `[unverified citation]` between prayer lines
+- `MERGE_GAP = 8` merges guru blocks within 8 lines of each other — garbled praṇāma (not matching GURU_MARKERS) between recognized prayer lines was splitting one opening set into multiple blocks
+- Wired into `orchestrator.ts` (stage 3b) and `batch-reclean.ts` (step 2)
+
+**Validation**: 35-file test suite. 1/35 correctly stripped (truly fabricated, raw=NO after folding). 34/35 correctly kept. Zero false positives. `tsc --noEmit` clean.
+
+**Known separate issue**: verse-restore can duplicate a verse when Sonnet splits one garbled verse across two `[unverified citation]` blocks (1/35 files affected). Not a stripper issue — verse-restore dedup needed.
+
+---
+
 ## 2026-08-01 — Pipeline repeatability: 4 fixes from BB retranscription audit
 
 Manual quality review of 35 BB lecture transcripts revealed 4 pipeline gaps where human intervention was needed. All 4 fixed so the pipeline produces the same quality automatically.
@@ -186,3 +223,25 @@ Tests: `scripts/test-verse-restore.mjs` 32/32 (was 29), incl. the greeting and d
 **Fix**: pass chunk index to the prompt. Chunks 2+ get a continuation preamble telling the LLM NOT to apply Rule 2. Only chunk 1 (actual transcript start) gets the opening-prayer restoration.
 
 **Decision**: fix the pipeline first, then re-run all affected files through the corrected pipeline. Do NOT manually patch existing transcripts — full re-run preferred for consistency.
+
+## 2026-08-02 — Brahma-saṁhitā Ch.5 corpus + 3 verse-restore fixes
+
+**corpus-seeds.json**: all 62 BS 5.x verses added (transliteration + translation from vedic-scriptures-library MCP, vedarama/BSST edition). MCP reference format = bare verse number (no chapter prefix). Transliterations cleaned: blank lines between verse lines collapsed to `\n`. Total seeds: 96 entries (BS 62 + Padma Purāṇa + Nārada-pancarātra + CC + SB + Caitanya-candrāmṛta + BB flat-key mismatches).
+
+**Fix 1 — bhakta→devotee COMMON_SUBS removed**: was corrupting Sanskrit compounds. "gaura-bhakta-vṛnda" → "gaura-devotee-vṛnda" in Pañca-tattva mantra. Removed entirely — no safe regex boundary for Sanskrit compounds.
+
+**Fix 2 — Pañca-tattva "jaya" prefix restored**: corpus.json canonical text was missing "jaya" prefix → verse-restore stripped it from 3 files. Fixed canonical to: "jaya śrī-kṛṣṇa-caitanya prabhu-nityānanda…"
+
+**Fix 3 — CC_KEY tiebreaker**: within 0.02 Jaccard, prefer non-CC match over CC. Prevents BS verses from being labelled as their CC alias. Also added PRAYER_ALIAS exclusion for CC Ādi-līlā 12.2 (duplicate of Pañca-tattva-mantra keyed under CC).
+
+**Other**: displayReference citation format fix (SB 1 2 → SB 1.2), lecture opening restoration handles split header lines.
+
+Commit: `54bdfe0`, pushed to main.
+
+## 2026-08-02 — Evaluating gpt-4o-transcribe: standalone test script, not a pipeline swap
+
+User wants to try OpenAI's `gpt-4o-transcribe` as a possible alternative/addition to Groq Whisper-large-v3 (current primary) / Deepgram nova-3 (fallback).
+
+**Decision**: build `scripts/test-gpt4o-transcribe.ts` as an isolated comparison script (runs both providers on the same audio, saves outputs side by side to `~/Downloads`). Do NOT wire into `transcribe.ts`'s provider enum or change pipeline defaults until results are reviewed — this is an evaluation step, not a swap.
+
+**Supporting change**: exported `SANSKRIT_PROMPT` from `src/lib/pipeline/transcribe.ts` (was module-private) so the test script reuses the same Vaiṣṇava term/verse list instead of duplicating it. Zero behavior change to the production pipeline.
