@@ -1,0 +1,575 @@
+{
+  "_meta": {
+    "note": "Hand-curated verses NOT covered by the auto-generated corpus (non-BBT sources: Padma Purāṇa, Nārada-pancarātra, etc., plus BB verses with flat-key mismatches). Merged into corpus at load time — these entries always win over auto-generated ones. Add new entries here; never hand-edit corpus.json."
+  },
+  "Padma Purāṇa, Brahma-khaṇḍa 25.15": {
+    "reference": "Padma Purāṇa, Brahma-khaṇḍa 25.15",
+    "text": "śivasya śrī-viṣṇor ya iha guṇa-nāmādi-sakalaṁ\ndhiyā bhinnaṁ paśyet sa khalu hari-nāmāhita-karaḥ",
+    "translation": "One who sees differences between any of Lord Śiva's qualities and names and those of Śrī Viṣṇu is an antagonist to harināma.",
+    "source": "bb-epub:padma-purana"
+  },
+  "BB 1.2.43": {
+    "reference": "BB 1.2.43",
+    "text": "tad-ājñayā ca yajñeṣu niyujyarṣīn nijātmajān\nbrahmāṇḍa-kārya-carcārthaṁ svaṁ dhiṣṇyaṁ vidhir āgataḥ",
+    "translation": "At the Lord's request, Brahmā then instructed his sons to continue the sacrifices while he went to his own royal court to deliberate on the management of the universe.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.62": {
+    "reference": "BB 1.2.62",
+    "text": "tan-māyayaiva satataṁ jagato 'haṁ guruḥ prabhuḥ\npitāmahaś ca kṛṣṇasya nābhi-padma-samudbhavaḥ\ntapasvy ārādhakas tasyety-ādyair guru-madair hataḥ\nbrahmāṇḍāvasyakāpāra-vyāpāramarṣa-vihvalaḥ\nbhūta-prāyātma-lokīya-nāśa-cintā-niyantritaḥ\nsarva-grāsi-mahā-kālād bhīto muktiṁ paraṁ vṛṇe",
+    "translation": "By the power of Kṛṣṇa's māyā, I am always deluded by various conceits. I think myself the controller, grandfather, and spiritual master of the universe. Proud of my birth from Kṛṣṇa's lotus navel, I think myself a great ascetic, His great worshipper. I am overwhelmed by the countless duties of universal management. Worrying about the imminent destruction of my planet, I live in terror of the all-devouring end of time. All I want for myself is liberation.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.71": {
+    "reference": "BB 1.2.71",
+    "text": "tathāpi rāvaṇādibhyo duṣṭebhyo 'haṁ varān adām\nrāvaṇasya tu yat karma jihvā kasya gṛṇāti tat",
+    "translation": "Nonetheless, I kept on giving benedictions to wicked demons like Rāvaṇa. Whose tongue can even mention the sins Rāvaṇa has done?",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.72": {
+    "reference": "BB 1.2.72",
+    "text": "mayā dattādhikārāṇāṁ śakrādīnāṁ mahā-madaiḥ\nsadā hata-vivekānāṁ tasminn āgāṁsi saṁsmara",
+    "translation": "Remember the offenses committed against the Lord by Indra and the other demigods I appointed? The excessive pride of those demigods constantly perverts their discrimination.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.73": {
+    "reference": "BB 1.2.73",
+    "text": "vṛṣṭi-yuddhādinendrasya govardhana-makhādiṣu\nnanda-haraṇa-bānīya-dhenv-ādānādinar-pateḥ",
+    "translation": "Indra sent rain to retaliate for the Govardhana sacrifice, sometimes fought against the Lord, and committed other offenses. The Lord of the Waters, Varuṇa, offended the Lord by kidnapping Nanda Mahārāja, by failing to return the cows belonging to Varuṇa, and so on.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.74": {
+    "reference": "BB 1.2.74",
+    "text": "yamasya ca tad-ācārya-tmaja-durmaraṇādinā\nkuverasyāpi duśceṣṭā-śaṅkhacūḍa-kṛtādinā",
+    "translation": "Yamārāja made mistakes like allowing the wrongful death of the son of the Lord's teacher. And Kuvera was responsible for the wicked misdeeds of Śaṅkhacūḍa and others.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.75": {
+    "reference": "BB 1.2.75",
+    "text": "adho loke tu daiteyā vaiṣṇava-droha-kāriṇaḥ\nsarpāś ca sahaja-krodha-duṣṭāḥ kāliya-bāndhavāḥ",
+    "translation": "In the lower planetary systems live those who always attack Lord Viṣṇu's devotees. And also living there are the serpent friends of Kāliya, who by nature are contaminated by anger.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.87-88": {
+    "reference": "BB 1.2.87-88",
+    "text": "śiva-datta-varonmattāt tripureśvarato mayāt\ntathā vṛkāsurādeś ca saṅkaṭaṁ paramaṁ gataḥ\nśivaḥ samuddhṛto 'nena harṣitaś ca vaco-'mṛtaiḥ\ntad-antaraṅga-sad-bhaktyā kṛṣṇena vaśa-vartinā\nsvayam ārādhyate cāsya māhātmya-bhara-siddhaye",
+    "translation": "When Māyā, the master of Tripura, grew intoxicated with pride by Lord Śiva's benediction and placed Lord Śiva in danger, and when Lord Śiva was troubled by other demons like Vṛkāsura, the Supreme Lord saved him and encouraged him with nectarean words. And sometimes, to broadcast Lord Śiva's glories, Lord Kṛṣṇa takes the role of his subordinate and worships him with intimate devotion.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.91": {
+    "reference": "BB 1.2.91",
+    "text": "purāṇāny eva gāyanti\ndayālutvaṁ harer hare\njñāyate hi tvayāpy etat\nparaṁ ca smaryatāṁ mune",
+    "translation": "The Purāṇas sing of the compassion of Lord Hari, O Hara. You too know of this, and let it be especially remembered, O sage.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 2.5.234": {
+    "reference": "BB 2.5.234",
+    "text": "cet kṛṣṇa-candrasya mahāvatāras\ntādṛg nija-prema-vitāna-kārī\nsyād vā kadācid yadi rādhikāyāḥ\npremānubhūtiṁ tad upaity athāpi",
+    "translation": "Should there ever be a full incarnation of Śrī Kṛṣṇa-candra to distribute pure Kṛṣṇa-prema, to experience the Kṛṣṇa-prema of Śrīmatī Rādhikā, you might be able to understand it.",
+    "source": "bb-epub:brhad-bhagavatamrta-2.5"
+  },
+  "Caitanya-candrāmṛta 5": {
+    "reference": "Caitanya-candrāmṛta 5",
+    "text": "kaivalyaṁ narakāyate tri-daśa-pūr ākāśa-puṣpāyate",
+    "translation": "When one receives the merciful sidelong glance of Lord Caitanya, the conception of liberation becomes like hell.",
+    "source": "manual:caitanya-candramrta"
+  },
+  "Kūrma Purāṇa (brahmaṇā saha)": {
+    "reference": "Kūrma Purāṇa (brahmaṇā saha)",
+    "text": "brahmaṇā sahate sarve samprapte prati-sañcare parasyante kṛtātmanāḥ prati-saṅkhāre viśyanti paramaṁ padam",
+    "translation": "Those who are on Brahmaloka with exalted status at the time of dissolution go directly to the Supreme Abode along with Lord Brahmā.",
+    "source": "manual:kurma-purana"
+  },
+  "SB 5.19.21": {
+    "reference": "SB 5.19.21",
+    "text": "etad eva hi deva gayanti aho amīṣāṁ kim akāri śobhanaṁ\nprasannā eṣāṁ svid uta svayaṁ hariḥ\nyajjanma labdhaṁ nṛṣu bhāratājire\nmukunda-sevaupayikaṁ spṛhā hi naḥ",
+    "translation": "Since the human form of life is the sublime position for spiritual realization, all the demigods in heaven speak: 'How wonderful it is for these human beings to have been born in the land of Bhāratavarṣa. We devas can only aspire to achieve human births in Bhāratavarṣa to execute devotional service.'",
+    "source": "manual:srimad-bhagavatam-5.19"
+  },
+  "BB 1.2.51": {
+    "reference": "BB 1.2.51",
+    "text": "yasmin nityaṁ vaset sākṣān mahā-puruṣa-vigrahaḥ\nsāt padmānābho yajñānāṁ bhagavān aśnān dādad phalam",
+    "translation": "On Brahmaloka, Lord Nārāyaṇa resides always in his manifest form. As the lotus-naveled Mahāpuruṣa, he eats his shares of sacrifice and grants the sacrificial results.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.52": {
+    "reference": "BB 1.2.52",
+    "text": "paramānveṣaṇāyāsair yasyoddeśo 'pi na tvayā\npurā prāptaḥ paraṁ dṛṣṭas tapobhir hṛdi yaḥ kṣaṇam",
+    "translation": "Although in the distant past you made many attempts and were unable to find him after performing austerities, you finally saw him just for a moment in your heart.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.4.25": {
+    "reference": "BB 1.4.25",
+    "text": "brahma-tat-tanayādīnāṁ kartuṁ vāk-satyatām api\nnija-bhakti-māhāttvañ ca samyag darśayituṁ param",
+    "translation": "He also wished to uphold the truth of the words of Brahmā and of others such as Brahmā's sons, and to fully display the greatness of devotional service.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.4"
+  },
+  "CC Antya 4.176": {
+    "reference": "CC Antya 4.176",
+    "text": "'dvaite' bhadrābhadra-jñāna, saba — 'manodharma'\n'ei bhāla, ei manda', — ei saba 'bhrama'",
+    "translation": "In the material world, conceptions of good and bad are all mental speculations. Thinking 'this is good' and 'this is bad' is all a mistake.",
+    "source": "manual:caitanya-caritamrta-antya"
+  },
+  "BB 2.7.8": {
+    "reference": "BB 2.7.8",
+    "text": "bhavataś cātra viśvāso nitarāṁ samāpadyata\nlakṣaṇair lakṣitaś cāyaṁ mayā śīghra-phala-pradaḥ",
+    "translation": "I have noted clear signs that you have gained strong faith in these topics, a faith that will soon bestow upon you all its rewards.",
+    "source": "bb-epub:brhad-bhagavatamrta-2.7"
+  },
+  "BB 1.2.54": {
+    "reference": "BB 1.2.54",
+    "text": "śrī-parīkṣit uvāca\nitthaṁ mahātmyam uddhāya vistārya brahmaṇo sukṛt\nśakra-proktaṁ sva-dṛṣṭaṁ ca bhakti-bhāva-samāsthitaḥ\nnanāma muniḥ",
+    "translation": "Śrī Parīkṣit said: Thus loudly praising Brahmā, bowing before him with great devotion again and again, the sage Nārada expansively sang Brahmā's glories as he had heard them from Indra and seen them with his own eyes.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.55": {
+    "reference": "BB 1.2.55",
+    "text": "śṛṇvann eva sa tad-vākyam dāso'smīti muhur vadan\ncatur-vakṣas tac-carṇānaṁ hṛdayena vyagṛhṇata",
+    "translation": "Merely by hearing what Nārada said, Brahmā grew disturbed. He anxiously covered his eight ears and said over and over again, 'I am just a servant.'",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.56": {
+    "reference": "BB 1.2.56",
+    "text": "aśravya-śravaṇāj jātaṁ\nkopaṁ yatnena dhārayan\nsva-putraṁ nāradaṁ prāha\nsākṣepaṁ catur-ānanaḥ",
+    "translation": "With some effort, the four-headed Brahmā checked the anger stirred within him by hearing what no one should hear, and rebuked his son Nārada.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.57": {
+    "reference": "BB 1.2.57",
+    "text": "śrī brahmovāca\nahaṁ na bhagavān kṛṣṇa iti tvaṁ kiṁ pramāṇataḥ\nyuktitaś ca mayābhīkṣṇaṁ bodhito'si bālataḥ",
+    "translation": "Śrī Brahmā said: I am not the Supreme Lord Kṛṣṇa. On what authority and by what logic do you say this? Have I not constantly taught you about this since you were a little boy?",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.58": {
+    "reference": "BB 1.2.58",
+    "text": "tasya śaktir mahā-māyā dāsīvekṣā-pathe sthitā\nsṛjatīdaṁ jagat pāti sva-guṇaiḥ saṁharaty api",
+    "translation": "His personal energy, Mahāmāyā, stands within his sight like a maidservant. It is she who deploys her material modes to create, maintain, and demolish this world.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.59": {
+    "reference": "BB 1.2.59",
+    "text": "tasyā eva vayaṁ sarve 'py adhīnā mohitās tayā\ntan na kṛṣṇa-kṛpā-leśasy-āpi pātram avehi mām",
+    "translation": "All of us are subject to her and bewildered. So you should not think me the recipient of even a trace of Kṛṣṇa's mercy.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.63": {
+    "reference": "BB 1.2.63",
+    "text": "tad-arthaṁ bhagavat-pūjāṁ kārayāmi karomi ca\navāso jagad-īśasya tasya vā na kva vidyate",
+    "translation": "For this purpose of liberation, I engage others in worshipping the Lord, and also worship Him myself. Since He is the Lord of the universe, is there any place where He does not reside?",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.64": {
+    "reference": "BB 1.2.64",
+    "text": "vedā-pravartanāyāsya bhagam gṛhṇāti kevalam\nsvayaṁ sapādita-preṣṭha-yajñasyānugrahāya ca",
+    "translation": "He accepts sacrificial offerings from me only to promote the Vedic teachings and to show special favor to the sacrifices themselves, which are dear to Him because He is their original creator.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.65": {
+    "reference": "BB 1.2.65",
+    "text": "vicārācārya budhyasva\nsa hi bhakty-eka-vallabhaḥ\nkṛpāṁ tanoti bhakteṣu\nnābhakteṣu kadācana",
+    "translation": "Just consider this, my dear professor of logic. He loves only devotion. He shows His mercy only to His devotees, never to non-devotees.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.66": {
+    "reference": "BB 1.2.66",
+    "text": "bhaktir dūre 'stu tasmin me nāparādhā bhavanti cet\nbahu manye tad ātmānaṁ nāham āgaḥsu rudra-vat",
+    "translation": "Forget about my having any devotion for Him. I would be happy if only it were true that I never offend Him. I cannot expect Him to tolerate my offenses as He does Lord Śiva's.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.67": {
+    "reference": "BB 1.2.67",
+    "text": "mad-āpta-vara-jāto 'sau sarva-lokopatāpakaḥ\nhiraṇyakaśipuḥ duṣṭo vaiṣṇava-droha-tatparaḥ",
+    "translation": "With benedictions obtained from me, the wicked Hiraṇyakaśipu became the tormentor of all the worlds, dedicated to violence against Vaiṣṇavas.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.68-69": {
+    "reference": "BB 1.2.68-69",
+    "text": "śrīman-nṛsiṁha-rūpeṇa prabhuṇā saṁhṛto yadā\ntadāhaṁ sa-parivāro vicitra-stava-pāṭavaiḥ\nstuvan sthitvā bhayād dūre 'pāṅga-dṛṣṭyāpi nādṛtaḥ\nprahlādasyābhiṣeke tu vṛtte tasmin prasādataḥ",
+    "translation": "After the Lord in his form as Nṛsiṁhadeva destroyed Hiraṇyakaśipu, I and my entourage stood fearful at a distance, trying to praise the Lord with skillful prayers, but he would not even honor us with a sidelong glance. Yet when Prahlāda was inaugurated king, the Lord at once became pacified.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.70": {
+    "reference": "BB 1.2.70",
+    "text": "śanair upasṛto 'bhyarṇam ādiṣṭo 'ham idaṁ ruṣā\nmaivam varo 'surāṇāṁ te pradeyaḥ padma-sambhava",
+    "translation": "Then I slowly approached him, and he angrily ordered me, 'You should not give such benedictions to demons, O lotus-born.'",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BB 1.2.76": {
+    "reference": "BB 1.2.76",
+    "text": "sampraty api mayā tasya svayaṁ vatsās tathārbhakāḥ\nvṛndāvane pālyamānā bhojane māyayā hṛtāḥ",
+    "translation": "And recently, by my magic, I stole the calves and young friends the Lord was watching after in Vṛndāvana. I took them all away while the boys were having lunch.",
+    "source": "bb-epub:brhad-bhagavatamrta-1.2"
+  },
+  "BS 5.29": {
+    "reference": "BS 5.29",
+    "text": "cintāmaṇi-prakara-sadmasu kalpa-vṛkṣa-\nlakṣāvṛteṣu surabhīr abhipālayantam\nlakṣmī-sahasra-śata-sambhrama-sevyamānaṁ\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, the first progenitor who is tending the cows, yielding all desire, in abodes built with spiritual gems, surrounded by millions of purpose trees, always served with great reverence and affection by hundreds of thousands of lakṣmīs or gopīs.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.43": {
+    "reference": "BS 5.43",
+    "text": "goloka-nāmni nija-dhāmni tale ca tasya\ndevi maheśa-hari-dhāmasu teṣu teṣu\nte te prabhāva-nicayā vihitāś ca yena\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "Lowest of all is located Devī-dhāma [mundane world], next above it is Maheśa-dhāma [abode of Maheśa]; above Maheśa-dhāma is placed Hari-dhāma [abode of Hari] and above them all is located Kṛṣṇa's own realm named Goloka. I adore the primeval Lord Govinda, who has allotted their respective authorities to the rulers of those graded realms.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.1": {
+    "reference": "BS 5.1",
+    "text": "īśvaraḥ paramaḥ kṛṣṇaḥ\nsac-cid-ānanda-vigrahaḥ\nanādir ādir govindaḥ\nsarva-kāraṇa-kāraṇam",
+    "translation": "Kṛṣṇa who is known as Govinda is the Supreme Godhead. He has an eternal blissful spiritual body. He is the origin of all. He has no other origin and He is the prime cause of all causes.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.2": {
+    "reference": "BS 5.2",
+    "text": "sahasra-patra-kamalaṁ\ngokulākhyaṁ mahat padam\ntat-karṇikāraṁ tad-dhāma\ntad-anantāṁśa-sambhavam",
+    "translation": "The superexcellent station of Kṛṣṇa, which is known as Gokula, has thousands of petals and a corolla like that of a lotus sprouted from a part of His infinitary aspect, the whorl of the leaves being the actual abode of Kṛṣṇa.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.3": {
+    "reference": "BS 5.3",
+    "text": "karṇikāraṁ mahad yantraṁ\nṣaṭ-koṇaṁ vajra-kīlakam\nṣaḍ-aṅga-ṣaṭ-padī-sthānaṁ\nprakṛtyā puruṣeṇa ca\npremānanda-mahānanda-\nrasenāvasthitaṁ hi yat\njyotī-rūpeṇa manunā\nkāma-bījena saṅgatam",
+    "translation": "The whorl of that transcendental lotus is the realm wherein dwells Kṛṣṇa. It is a hexagonal figure, the abode of the indwelling predominated and predominating aspect of the Absolute.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.4": {
+    "reference": "BS 5.4",
+    "text": "tat-kiñjalkaṁ tad-aṁśānāṁ\ntat-patrāṇi śriyām api",
+    "translation": "The whorl of that eternal realm Gokula is the hexagonal abode of Kṛṣṇa. Its petals are the abodes of gopīs who are part and parcel of Kṛṣṇa to whom they are most lovingly devoted and are similar in essence.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.5": {
+    "reference": "BS 5.5",
+    "text": "catur-asraṁ tat-paritaḥ\nśvetadvīpākhyam adbhutam\ncatur-asraṁ catur-mūrteś\ncatur-dhāma catuṣ-kṛtam\ncaturbhiḥ puruṣārthaiś ca\ncaturbhir hetubhir vṛtam\nśūlair daśabhir ānaddham\nūrdhvādho dig-vidikṣv api\naṣṭabhir nidhibhir juṣṭam\naṣṭabhiḥ siddhibhis tathā\nmanu-rūpaiś ca daśabhir\ndik-pālaiḥ parito vṛtam\nśyāmair gauraiś ca raktaiś ca\nśuklaiś ca pārṣadarṣabhaiḥ\nśobhitaṁ śaktibhis tābhir\nadbhutābhiḥ samantataḥ",
+    "translation": "There is a mysterious quadrangular place named Śvetadvīpa surrounding the outskirts of Gokula. Śvetadvīpa is divided into four parts on all sides.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.6": {
+    "reference": "BS 5.6",
+    "text": "evaṁ jyotir-mayo devaḥ\nsad-ānandaḥ parāt paraḥ\nātmārāmasya tasyāsti\nprakṛtyā na samāgamaḥ",
+    "translation": "The Lord of Gokula is the transcendental Supreme Godhead, the own Self of eternal ecstasies. He is the superior of all superiors and is busily engaged in the enjoyments of the transcendental realm and has no association with His mundane potency.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.7": {
+    "reference": "BS 5.7",
+    "text": "māyayāramamāṇasya\nna viyogas tayā saha\nātmanā ramayā reme\ntyakta-kālaṁ sisṛkṣayā",
+    "translation": "Kṛṣṇa never consorts with His illusory energy. Still her connection is not entirely cut off from the Absolute Truth.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.8": {
+    "reference": "BS 5.8",
+    "text": "niyatiḥ sā ramā devi\ntat-priyā tad-vaśaṁ tadā\ntal-liṅgaṁ bhagavān śambhur\njyoti-rūpaḥ sanātanaḥ\nyā yoniḥ sāparā śaktiḥ\nkāmo bījaṁ mahad dhareḥ",
+    "translation": "Ramādevī, the spiritual potency, beloved consort of the Supreme Lord, is the regulatrix of all entities. The divine plenary portion of Kṛṣṇa creates the mundane world.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.9": {
+    "reference": "BS 5.9",
+    "text": "liṅga-yony-ātmikā jātā\nimā māheśvarī-prajāḥ",
+    "translation": "All offspring of the consort of the great lord of this mundane world are of the nature of the embodiment of the mundane masculine and feminine generative organs.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.10": {
+    "reference": "BS 5.10",
+    "text": "śaktimān puruṣaḥ so 'yaṁ\nliṅga-rūpī maheśvaraḥ\ntasminn āvirabhūl liṅge\nmahā-viṣṇur jagat-patiḥ",
+    "translation": "The person embodying the material causal principle, viz., the great lord of this mundane world Śambhu, in the form of the male generating organ, is joined to his female consort the limited energy as the efficient causal principle.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.11": {
+    "reference": "BS 5.11",
+    "text": "sahasra-śīrṣā puruṣaḥ\nsahasrākṣaḥ sahasra-pāt\nsahasra-bāhur viśvātmā\nsahasrāṁśaḥ sahasra-sūḥ",
+    "translation": "The Lord of the mundane world, Mahā-Viṣṇu, possesses thousands of thousands of heads, eyes, hands. He is the source of thousands of thousands of avatāras in His thousands of thousands of subjective portions.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.12": {
+    "reference": "BS 5.12",
+    "text": "nārāyaṇaḥ sa bhagavān\nāpas tasmāt sanātanāt\nāvirāsīt kāraṇārṇo\nnidhiḥ saṅkarṣaṇātmakaḥ\nyoga-nidrāṁ gatas tasmin\nsahasrāṁśaḥ svayaṁ mahān",
+    "translation": "The same Mahā-Viṣṇu is spoken of by the name of 'Nārāyaṇa' in this mundane world. From that eternal person has sprung the vast expanse of water of the spiritual Causal Ocean.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.13": {
+    "reference": "BS 5.13",
+    "text": "tad-roma-bila jāleṣu\nbījaṁ saṅkarṣaṇasya ca\nhaimāny aṇḍāni jātāni\nmahā-bhūtāvṛtāni tu",
+    "translation": "The spiritual seeds of Saṅkarṣaṇa existing in the pores of skin of Mahā-Viṣṇu, are born as so many golden sperms. These sperms are covered with five great elements.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.14": {
+    "reference": "BS 5.14",
+    "text": "praty-aṇḍam evam ekāṁśād\nekāṁśād viśati svayam\nsahasra-mūrdhā viśvātmā\nmahā-viṣṇuḥ sanātanaḥ",
+    "translation": "The same Mahā-Viṣṇu entered into each universe as His own separate subjective portions.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.15": {
+    "reference": "BS 5.15",
+    "text": "vāmāṅgād asṛjad viṣṇuṁ\ndakṣiṇāṅgāt prajāpatim\njyotir-liṅga-mayaṁ śambhuṁ\nkūrca-deśād avāsṛjat",
+    "translation": "The same Mahā-Viṣṇu created Viṣṇu from His left limb, Brahmā, the first progenitor of beings, from His right limb and, from the space between His two eyebrows, Śambhu, the divine masculine manifested halo.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.16": {
+    "reference": "BS 5.16",
+    "text": "ahaṅkārātmakaṁ viśvaṁ\ntasmād etad vyajāyata",
+    "translation": "The function of Śambhu in relation to jīvas is that this universe enshrining the mundane egotistic principle has originated from Śambhu.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.17": {
+    "reference": "BS 5.17",
+    "text": "atha tais tri-vidhair veśair\nlīlām udvahataḥ kila\nyoga-nidrā bhagavatī\ntasya śrīr iva saṅgatā",
+    "translation": "Thereupon the same great personal Godhead, assuming the threefold forms of Viṣṇu, Prajāpati and Śambhu, entering into the mundane universe, plays the pastimes of preservation, creation and destruction of this world.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.18": {
+    "reference": "BS 5.18",
+    "text": "sisṛkṣāyāṁ tato nābhes\ntasya padmaṁ viniryayau\ntan-nālaṁ hema-nalinaṁ\nbrahmaṇo lokam adbhutam",
+    "translation": "When Viṣṇu lying in the ocean of milk wills to create this universe, a golden lotus springs from His navel-pit. The golden lotus with its stem is the abode of Brahmā representing Brahmaloka or Satyaloka.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.19": {
+    "reference": "BS 5.19",
+    "text": "tattvāni pūrva-rūḍhāni\nkāraṇāni parasparam\nsamavāyāprayogāc ca\nvibhinnāni pṛthak pṛthak\ncic-chaktyā sajjamāno 'tha\nbhagavān ādi-pūruṣaḥ\nyojayan māyayā devo\nyoga-nidrām akalpayat",
+    "translation": "Before their conglomeration the primary elements in their nascent state remained originally separate entities. Divine Mahā-Viṣṇu, primal Godhead, through association with His own spiritual potency, moved Māyā.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.20": {
+    "reference": "BS 5.20",
+    "text": "yojayitvā tu tāny eva\npraviveśa svayaṁ guhām\nguhāṁ praviṣṭe tasmiṁs tu\njīvātmā pratibudhyate",
+    "translation": "By conglomerating all those separate entities He manifested the innumerable mundane universes and Himself entered into the inmost recess of every extended conglomerate. At that time those jīvas who had lain dormant during the cataclysm were awakened.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.21": {
+    "reference": "BS 5.21",
+    "text": "sa nityo nitya-sambandhaḥ\nprakṛtiś ca paraiva sā",
+    "translation": "The same jīva is eternal and is for eternity and without a beginning joined to the Supreme Lord by the tie of an eternal kinship. He is transcendental spiritual potency.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.22": {
+    "reference": "BS 5.22",
+    "text": "evaṁ sarvātma-sambandhaṁ\nnābhyāṁ padmaṁ harer abhūt\ntatra brahmābhavad bhūyaś\ncatur-vedi catur-mukhaḥ",
+    "translation": "The divine lotus which springs from the navel-pit of Viṣṇu is in every way related by the spiritual tie with all souls and is the origin of four-faced Brahmā versed in the four Vedas.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.23": {
+    "reference": "BS 5.23",
+    "text": "sañjāto bhagavac-chaktyā\ntat-kālaṁ kila coditaḥ\nsisṛkṣāyāṁ matiṁ cakre\npūrva-saṁskāra-saṁskṛtaḥ\ndardarśa kevalaṁ dhvāntaṁ\nnānyat kim api sarvataḥ",
+    "translation": "On coming out of the lotus, Brahmā, being guided by the divine potency tuned his mind to the act of creation under the impulse of previous impressions. But he could see nothing but darkness in every direction.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.24": {
+    "reference": "BS 5.24",
+    "text": "uvāca puratas tasmai\ntasya divyā sarasvatī\nkāma-kṛṣṇāya govinda\nhe gopī-jana ity api\nvallabhāya priyā vahner\nmantram te dāsyati priyam",
+    "translation": "Then the goddess of learning Sarasvatī, the divine consort of the Supreme Lord, said thus to Brahmā who saw nothing but gloom in all directions, 'O Brahmā, this mantra will assuredly fulfill your heart's desire.'",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.25": {
+    "reference": "BS 5.25",
+    "text": "tapas tvaṁ tapa etena\ntava siddhir bhaviṣyati",
+    "translation": "'O Brahmā, do thou practice spiritual association by means of this mantra; then all your desires will be fulfilled.'",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.26": {
+    "reference": "BS 5.26",
+    "text": "atha tepe sa suciraṁ\nprīṇan govindam avyayam\nśvetadvīpa-patiṁ kṛṣṇaṁ\ngoloka-sthaṁ parāt param\nprakṛtyā guṇa-rūpiṇyā\nrūpiṇyā paryupāsitam\nsahasra-dala-sampanne\nkoṭi-kiñjalka-bṛṁhite\nbhūmiś cintāmaṇis tatra\nkarṇikāre mahāsane\nsamāsīnaṁ cid-ānandaṁ\njyoti-rūpaṁ sanātanam\nśabda-brahma-mayaṁ veṇuṁ\nvādayantaṁ mukhāmbuje\nvilāsinī-gaṇa-vṛtaṁ\nsvaiḥ svair aṁśair abhiṣṭutam",
+    "translation": "Brahmā, being desirous of satisfying Govinda, practiced the cultural acts for Kṛṣṇa in Goloka, Lord of Śvetadvīpa, for a long time.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.27": {
+    "reference": "BS 5.27",
+    "text": "atha veṇu-ninādasya\ntrayī-mūrti-mayī gatiḥ\nsphurantī praviveśāśu\nmukhābjāni svayambhuvaḥ\ngāyatrīṁ gāyatas tasmād\nadhigatya sarojajaḥ\nsaṁskṛtaś cādi-gunuṇā\ndvijatām agamat tataḥ",
+    "translation": "Then Gāyatrī, mother of the Vedas, being made manifest by the divine sound of the flute of Śrī Kṛṣṇa, entered into the lotus mouth of Brahmā. The lotus-born Brahmā having received the Gāyatrī attained the status of the twice-born.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.28": {
+    "reference": "BS 5.28",
+    "text": "trayyā prabuddho 'tha vidhir\nvījñāta-tattva-sāgaraḥ\ntuṣṭāva veda-sāreṇa\nstotreṇānena keśavam",
+    "translation": "Enlightened by the recollection of that Gāyatrī, embodying the three Vedas, Brahmā became acquainted with the expanse of the ocean of truth. Then he worshiped Śrī Kṛṣṇa, the essence of all Vedas, with this hymn.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.30": {
+    "reference": "BS 5.30",
+    "text": "veṇuṁ kvaṇantam aravinda-dalāyatākṣam-\nbarhāvataṁsam asitāmbuda-sundarāṅgam\nkandarpa-koṭi-kamanīya-viśeṣa-śobhaṁ\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, who is adept in playing on His flute, with blooming eyes like lotus petals with head decked with peacock's feather, with the figure of beauty tinged with the hue of blue clouds, and His unique loveliness charming millions of Cupids.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.31": {
+    "reference": "BS 5.31",
+    "text": "ālola-candraka-lasad-vanamālya-vaṁśī-\nratnāṅgadaṁ praṇaya-keli-kalā-vilāsam\nśyāmaṁ tri-bhaṅga-lalitaṁ niyata-prakāśaṁ\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, round whose neck is swinging a garland of flowers beautified with the moon-locket, whose two hands are adorned with the flute and jeweled ornaments, who always revels in pastimes of love, whose graceful threefold-bending form of Śyāmasundara is eternally manifest.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.32": {
+    "reference": "BS 5.32",
+    "text": "aṅgāni yasya sakalendriya-vṛtti-manti\npaśyanti pānti kalayanti ciraṁ jaganti\nānanda-cinmaya-sad-ujjvala-vigrahasya\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, whose transcendental form is full of bliss, truth, substantiality and is thus full of the most dazzling splendor. Each of the limbs of that transcendental figure possesses in Himself, the full-fledged functions of all the organs.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.33": {
+    "reference": "BS 5.33",
+    "text": "advaitam acyutam anādim ananta-rūpam\nādyaṁ purāṇa-puruṣaṁ nava-yauvanaṁ ca\nvedeṣu durlabham adurlabham ātma-bhaktau\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, who is inaccessible to the Vedas, but obtainable by pure unalloyed devotion of the soul, who is without a second, who is not subject to decay, is without a beginning, whose form is endless, who is the beginning, and the eternal puruṣa; yet He is a person possessing the beauty of blooming youth.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.34": {
+    "reference": "BS 5.34",
+    "text": "panthās tu koṭi-śata-vatsara-sampragamyo\nvāyor athāpi manaso muni-puṅgavānām\nso 'py asti yat-prapada-sīmny avicintya-tattve\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, only the tip of the toe of whose lotus feet is approached by the yogīs who aspire after the transcendental and betake themselves to prāṇāyāma by drilling the respiration.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.35": {
+    "reference": "BS 5.35",
+    "text": "eko 'py asau racayituṁ jagad-aṇḍa-koṭiṁ\nyac-chaktir asti jagad-aṇḍa-cayā yad-antaḥ\naṇḍāntara-stha-paramāṇu-cayāntara-stham-\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "He is an undifferentiated entity as there is no distinction between potency and the possessor thereof. In His work of creation of millions of worlds, His potency remains inseparable. Such is the primeval Lord whom I adore.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.36": {
+    "reference": "BS 5.36",
+    "text": "yad-bhāva-bhāvita-dhiyo manujās tathaiva\nsamprāpya rūpa-mahimāsana-yāna-bhūṣāḥ\nsūktair yam eva nigama-prathitaiḥ stuvanti\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I adore the same Govinda, the primeval Lord, in whose praise men, who are imbued with devotion, sing the mantra-sūktas told by the Vedas, by gaining their appropriate beauty, greatness, thrones, conveyances and ornaments.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.37": {
+    "reference": "BS 5.37",
+    "text": "ānanda-cinmaya-rasa-pratibhāvitābhis\ntābhir ya eva nija-rūpatayā kalābhiḥ\ngoloka eva nivasaty akhilātma-bhūto\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, residing in His own realm, Goloka, with Rādhā, resembling His own spiritual figure, the embodiment of the ecstatic potency possessed of the sixty-four artistic activities, in the company of Her confidantes, embodiments of the extensions of Her bodily form, permeated and vitalized by His ever-blissful spiritual rasa.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.38": {
+    "reference": "BS 5.38",
+    "text": "premāñjana-cchurita-bhakti-vilocanena\nsantaḥ sadaiva hṛdayeṣu vilokayanti\nyaṁ śyāmasundaram acintya-guṇa-svarūpaṁ\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, who is Śyāmasundara, Kṛṣṇa Himself with inconceivable innumerable attributes, whom the pure devotees see in their heart of hearts with the eye of devotion tinged with the salve of love.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.39": {
+    "reference": "BS 5.39",
+    "text": "rāmādi-mūrtiṣu kalā-niyamena tiṣṭhan\nnānāvatāram akarod bhuvaneṣu kintu\nkṛṣṇaḥ svayaṁ samabhavat paramaḥ pumān yo\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, who manifested Himself personally as Kṛṣṇa and the different avatāras in the world in the forms of Rāma, Nṛsiṁha, Vāmana, etc., as His subjective portions.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.40": {
+    "reference": "BS 5.40",
+    "text": "yasya prabhā prabhavato jagad-aṇḍa-koṭi-\nkoṭiṣv aśeṣa-vasudhādi vibhūti-bhinnam\ntad brahma niṣkalam anantam aśeṣa-bhūtaṁ\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, whose effulgence is the source of the nondifferentiated Brahman mentioned in the Upaniṣads, being differentiated from the infinity of glories of the mundane universe appears as the indivisible, infinite, limitless, truth.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.41": {
+    "reference": "BS 5.41",
+    "text": "māyā hi yasya jagad-aṇḍa-śatāni sūte\ntraiguṇya-tad-viṣaya-veda-vitāyamānā\nsattvāvalambi-para-sattvaṁ viśuddha-sattvam-\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, who is the absolute substantive principle being the ultimate entity in the form of the support of all existence whose external potency embodies the threefold mundane qualities.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.42": {
+    "reference": "BS 5.42",
+    "text": "ānanda-cinmaya-rasātmatayā manaḥsu\nyaḥ prāṇināṁ pratiphalan smaratām upetya\nlīlāyitena bhuvanāni jayaty ajasram-\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I worship Govinda, the primeval Lord, whose glory ever triumphantly dominates the mundane world by the activity of His own pastimes, being reflected in the mind of recollecting souls as the transcendental entity of ever-blissful cognitive rasa.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.44": {
+    "reference": "BS 5.44",
+    "text": "sṛṣṭi-sthiti-pralaya-sādhana-śaktir ekā\nchāyeva yasya bhuvanāni bibharti durgā\nicchānurūpam api yasya ca ceṣṭate sā\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "The external potency Māyā who is of the nature of the shadow of the cit potency, is worshiped by all people as Durgā, the creating, preserving and destroying agency of this mundane world. I adore the primeval Lord Govinda in accordance with whose will Durgā conducts herself.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.45": {
+    "reference": "BS 5.45",
+    "text": "kṣīraṁ yathā dadhi vikāra-viśeṣa-yogāt\nsañjāyate na hi tataḥ pṛthag asti hetoḥ\nyaḥ śambhutām api tathā samupaiti kāryād\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "Just as milk is transformed into curd by the action of acids, but yet the effect curd is neither same as, nor different from, its cause, viz., milk, so I adore the primeval Lord Govinda of whom the state of Śambhu is a transformation for the performance of the work of destruction.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.46": {
+    "reference": "BS 5.46",
+    "text": "dīpārcir eva hi daśāntaram abhyupetya\ndīpāyate vivṛta-hetu-samāna-dharmā\nyas tādṛg eva hi ca viṣṇutayā vibhāti\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "The light of one candle being communicated to other candles, although it burns separately in them, is the same in its quality. I adore the primeval Lord Govinda who exhibits Himself equally in the same mobile manner in His various manifestations.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.47": {
+    "reference": "BS 5.47",
+    "text": "yaḥ kāraṇārṇava-jale bhajati sma yoga-\nnidrām ananta-jagad-aṇḍa-sa-roma-kūpaḥ\nādhāra-śaktim avalambya parāṁ sva-mūrtiṁ\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I adore the primeval Lord Govinda who assuming His own great subjective form, who bears the name of Śeṣa, replete with the all-accommodating potency, and reposing in the Causal Ocean with the infinity of the world in the pores of His hair, enjoys creative sleep.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.48": {
+    "reference": "BS 5.48",
+    "text": "yasyaika-niśvasita-kālam athāvalambya\njīvanti loma-vilajā jagad-aṇḍa-nāthāḥ\nviṣṇur mahān sa iha yasya kalā-viśeṣo\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "Brahmā and other lords of the mundane worlds, appearing from the pores of hair of Mahā-Viṣṇu, remain alive as long as the duration of one exhalation of the latter. I adore the primeval Lord Govinda of whose subjective personality Mahā-Viṣṇu is the portion of portion.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.49": {
+    "reference": "BS 5.49",
+    "text": "bhāsvān yathāśma-śakaleṣu nijeṣu tejaḥ\nsvīyam kiyat prakaṭayaty api tadvad atra\nbrahmā ya eṣa jagad-aṇḍa-vidhāna-kartā\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I adore the primeval Lord Govinda from whom the separated subjective portion Brahmā receives his power for the regulation of the mundane world, just as the sun manifests some portion of his own light in all the effulgent gems.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.50": {
+    "reference": "BS 5.50",
+    "text": "yat-pāda-pallava-yugaṁ vinidhāya kumbha-\ndvandve praṇāma-samaye sa gaṇādhirājaḥ\nvighnān vihantum alam asya jagat-trayasya\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I adore the primeval Lord Govinda, whose lotus feet are always held by Gaṇeśa upon the pair of tumuli protruding from his elephant head in order to obtain power for his function of destroying all the obstacles on the path of progress of the three worlds.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.51": {
+    "reference": "BS 5.51",
+    "text": "agnir mahi gaganam ambu marud diśaś ca\nkālas tathātma-manasīti jagat-trayāṇi\nyasmād bhavanti vibhavanti viśanti yaṁ ca\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "The three worlds are composed of the nine elements, viz., fire, earth, ether, water, air, direction, time, soul and mind. I adore the primeval Lord Govinda from whom they originate, in whom they exist and into whom they enter at the time of the universal cataclysm.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.52": {
+    "reference": "BS 5.52",
+    "text": "yac-cakṣur eṣa savitā sakala-grahāṇāṁ\nrājā samasta-sura-mūrtir aśeṣa-tejāḥ\nyasyājñayā bhramati sambhṛta-kāla-cakro\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "The sun who is the king of all the planets, full of infinite effulgence, the image of the good soul, is as the eye of this world. I adore the primeval Lord Govinda in pursuance of whose order the sun performs his journey mounting the wheel of time.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.53": {
+    "reference": "BS 5.53",
+    "text": "dharmo 'tha pāpa-nicayaḥ śrutayas tapāṁsi\nbrahmādi-kīṭa-patagāvadhayaś ca jīvāḥ\nyad-datta-mātra-vibhava-prakaṭa-prabhāvā\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I adore the primeval Lord Govinda, by whose conferred power are maintained the manifested potencies, that are found to exist, of all virtues, all vices, the Vedas, the penances and all jīvas, from Brahmā to the meanest insect.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.54": {
+    "reference": "BS 5.54",
+    "text": "yas tv indragopam athavendram aho sva-karma-\nbandhānurūpa-phala-bhājanam ātanoti\nkarmāṇi nirdahati kintu ca bhakti-bhājāṁ\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I adore the primeval Lord Govinda, who burns up to their roots all fruitive activities of those who are imbued with devotion and impartially ordains for each the due enjoyment of the fruits of one's activities.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.55": {
+    "reference": "BS 5.55",
+    "text": "yaṁ krodha-kāma-sahaja-praṇayādi-bhīti-\nvātsalya-moha-guru-gaurava-sevya-bhāvaiḥ\nsañcintya tasya sadṛśīṁ tanum āpur ete\ngovindam ādi-puruṣaṁ tam ahaṁ bhajāmi",
+    "translation": "I adore the primeval Lord Govinda, the meditators of whom, by meditating upon Him under the sway of wrath, amorous passion, natural friendly love, fear, parental affection, delusion, reverence and willing service, attain to bodily forms befitting the nature of their contemplation.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.56": {
+    "reference": "BS 5.56",
+    "text": "śriyaḥ kāntāḥ kāntaḥ parama-puruṣaḥ kalpa-taravo\ndrumā bhūmiś cintāmaṇi-gaṇa-mayi toyam amṛtam\nkathā gānaṁ nāṭyaṁ gamanam api vaṁśī priya-sakhi\ncid-ānandaṁ jyotiḥ param api tad āsvādyam api ca\nsa yatra kṣīrābdhiḥ sravati surabhībhyaś ca su-mahān\nnimeṣārdhākhyo vā vrajati na hi yatrāpi samayaḥ\nbhaje śvetadvīpaṁ tam aham iha golokam iti yaṁ\nvidantas te santaḥ kṣiti-virala-cārāḥ katipaye",
+    "translation": "I worship that transcendental seat, known as Śvetadvīpa where as loving consorts the Lakṣmīs in their unalloyed spiritual essence practice the amorous service of the Supreme Lord Kṛṣṇa as their only lover.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.57": {
+    "reference": "BS 5.57",
+    "text": "athovāca mahā-viṣṇur\nbhagavantaṁ prajāpatim\nbrahman mahattva-vijñāne\nprajā-sarge ca cen matiḥ\npañca-ślokīm imāṁ vidyāṁ\nvatsa dattāṁ nibodha me",
+    "translation": "On hearing these hymns containing the essence of the truth, the Supreme Lord Kṛṣṇa said to Brahmā, 'Brahmā, if you experience the inclination to create offspring by being endowed with the real knowledge of the glory of Godhead, listen, My beloved, from Me to this science set forth in the following five ślokas.'",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.58": {
+    "reference": "BS 5.58",
+    "text": "prabuddhe jñāna-bhaktibhyām\nātmany ānanda-cin-mayī\nudety anuttamā bhaktir\nbhagavat-prema-lakṣaṇā",
+    "translation": "When the pure spiritual experience is excited by means of cognition and service, superexcellent unalloyed devotion characterized by love for Godhead is awakened towards Kṛṣṇa, the beloved of all souls.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.59": {
+    "reference": "BS 5.59",
+    "text": "pramāṇais tat-sad-ācārais\ntad-abhyāsair nirantaram\nbodhayan ātmanātmānaṁ\nbhaktim apy uttamāṁ labhet",
+    "translation": "The highest devotion is attained by slow degrees by the method of constant endeavor for self-realization with the help of scriptural evidence, theistic conduct and perseverance in practice.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.60": {
+    "reference": "BS 5.60",
+    "text": "yasyāḥ śreyas-karaṁ nāsti\nyayā nirvṛtim āpnuyāt\nyā sādhayati mām eva\nbhaktiṁ tām eva sādhayet",
+    "translation": "These preliminary practices of devotion are conducive to the realization of loving devotion — than whom there is no superior well-being, who goes hand in hand with the attainment of the exclusive state of supreme bliss and who can lead to Myself.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.61": {
+    "reference": "BS 5.61",
+    "text": "dharmān anyān parityajya\nmām ekaṁ bhaja viśvasan\nyādṛśī yādṛśī śraddhā\nsiddhir bhavati tādṛśī\nkurvan nirantaraṁ karma\nloko 'yam anuvartate\ntenaiva karmaṇā dhyāyan\nmāṁ parāṁ bhaktim icchati",
+    "translation": "Abandoning all meritorious performances serve Me with faith. The realization will correspond to the nature of one's faith. The people of the world act ceaselessly in pursuance of some ideal.",
+    "source": "vedic-scriptures-library:bs"
+  },
+  "BS 5.62": {
+    "reference": "BS 5.62",
+    "text": "ahaṁ hi viśvasya carācarasya\nbījaṁ pradhānaṁ prakṛtiḥ pumāṁś ca\nmayāhitaṁ teja idaṁ bibharṣi\nvidhe vidhehi tvam atho jaganti",
+    "translation": "'Listen, O Vidhi, I am the seed, i.e., the fundamental principle, of this world of animate and inanimate objects. I am pradhāna, I am prakṛti and I am puruṣa. This fiery energy that belongs specially to the Brahman, that inheres in you, has also been conferred by Me.'",
+    "source": "vedic-scriptures-library:bs"
+  }
+}

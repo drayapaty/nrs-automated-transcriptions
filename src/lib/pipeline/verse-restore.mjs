@@ -10,13 +10,25 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const CORPUS = (() => {
+  let base = {};
   try {
-    const raw = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "corpus.json"), "utf-8"));
-    return raw;
+    base = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "corpus.json"), "utf-8"));
   } catch {
     console.error("[verse-restore] corpus.json not found — proceeding without corpus");
-    return {};
   }
+  try {
+    const seeds = JSON.parse(readFileSync(join(__dirname, "..", "..", "..", "corpus-seeds.json"), "utf-8"));
+    let count = 0;
+    for (const [k, v] of Object.entries(seeds)) {
+      if (k === "_meta") continue;
+      base[k] = v;
+      count++;
+    }
+    if (count) console.log(`[verse-restore] merged ${count} seed entries`);
+  } catch {
+    // corpus-seeds.json is optional
+  }
+  return base;
 })();
 
 function stripDiacritics(s) {
@@ -46,10 +58,13 @@ function jaccard(a, b) {
   return inter / (a.size + b.size - inter);
 }
 
+const PRAYER_ALIAS = new Set(["CC Ādi-līlā 12.2"]);
+
 const CORPUS_NGRAMS = (() => {
   const arr = [];
   for (const [key, e] of Object.entries(CORPUS)) {
     if (!e.text || e.text.length < 20) continue;
+    if (PRAYER_ALIAS.has(key)) continue;
     arr.push({ key, entry: e, grams: ngrams(e.text) });
   }
   console.log(`[verse-restore] corpus loaded: ${arr.length} entries with n-grams`);
@@ -151,8 +166,12 @@ function looksLikeMangalacarana(garbled) {
   return null;
 }
 
+const PRAYER_KEY = /praṇāma|mantra|namaskāra|mahā-mantra/i;
+
 function displayReference(corpusRef) {
-  return REFERENCE_OVERRIDE[corpusRef] || corpusRef;
+  let ref = REFERENCE_OVERRIDE[corpusRef] || corpusRef;
+  ref = ref.replace(/^(SB|CC|CB|BB|BRS) (\d+) (\d)/, "$1 $2.$3");
+  return ref;
 }
 
 // Keys that name a work directly rather than by scripture reference. Used to
@@ -161,11 +180,11 @@ function displayReference(corpusRef) {
 const NAMED_WORK =
   /^(Śikṣāṣṭaka|Guru-praṇāma|Prabhupāda-praṇāma|Jñāna-cakṣur-praṇāma|Pañca-tattva-mantra|Mahā-mantra|Nṛsiṁha-praṇāma|Bhagavat-namaskāra|Rādhā-praṇāma|Vyāsa-namaskāra)\b/;
 
+const CC_KEY = /^CC\b/;
+
 const COMMON_SUBS = [
   { from: /\bRādhe(-|\s+)Kṛṣṇa\b/g, to: "Hare Kṛṣṇa" },
   { from: /\bRadhe(-|\s+)Krishna\b/g, to: "Hare Krishna" },
-  { from: /(?<![-Ā-ɏ\w])bhaktas(?![-])/g, to: "devotees" },
-  { from: /(?<![-Ā-ɏ\w])bhakta(?![-\w])/g, to: "devotee" },
 ];
 
 function applyCommonSubs(md) {
@@ -183,13 +202,16 @@ function restoreLectureOpening(md) {
   const lines = md.split(/\r?\n/);
   const headerWindow = lines.slice(0, 5).join(" ").toLowerCase();
   if (!/dear devotees/i.test(headerWindow)) return { text: md, fixed: false };
-  if (/all glories to/i.test(headerWindow)) return { text: md, fixed: false };
+  if (/all glories to (?:śrīla |srila )?prabhup[aā]d/i.test(headerWindow)) {
+    return { text: md, fixed: false };
+  }
   for (let i = 0; i < Math.min(5, lines.length); i++) {
     if (/dear devotees/i.test(lines[i])) {
       lines[i] = lines[i].replace(
-        /(dear devotees)[.,]?\s*(our glorious Śrīla Prabhupāda)?/i,
-        "dear devotees. All glories to Śrīla Prabhupāda."
+        /(dear devotees)[.,]?\s*(?:(?:all\s+)?(?:glor(?:y|ies)|obeisances)\s+to\s+(?:(?:śrīla|srila)\s+)?prabhup[aā]d[aā]\.?\s*|(?:our\s+)?glorious\s+(?:\S+\s+)?prabhup[aā]d[aā]\.?\s*)?/i,
+        "dear devotees. All glories to Śrīla Prabhupāda. "
       );
+      lines[i] = lines[i].replace(/ {2,}/g, " ").trimEnd();
       return { text: lines.join("\n"), fixed: true };
     }
   }
@@ -200,6 +222,8 @@ const ENG_STOPS = new Set([
   "the","is","of","and","to","that","this","for","with","not","are","was",
   "but","has","had","his","her","can","our","how","who","we","he","she",
   "it","do","if","so","as","by","at","in","on","or","an","no",
+  "you","your","very","much","them","they","been","what","when","will",
+  "from","about","just","want","here","now","have","also","would","could",
 ]);
 
 function isVerseLine(line) {
@@ -244,7 +268,8 @@ function autoRestoreFromCorpus(md) {
         for (const c of CORPUS_NGRAMS) {
           const s = jaccard(q, c.grams);
           if (!best || s > best.score ||
-              (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key))) {
+              (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key)) ||
+              (Math.abs(s - best.score) < 0.02 && !CC_KEY.test(c.key) && CC_KEY.test(best.key))) {
             best = { score: s, entry: c.entry, key: c.key };
           }
         }
@@ -252,19 +277,13 @@ function autoRestoreFromCorpus(md) {
           const ref = best.entry.reference ? displayReference(best.entry.reference) : best.key;
           // Replace tag + garbled verse with canonical text + reference
           const canonical = best.entry.text.split(/\r?\n/);
-          canonical.push(`(${ref})`);
-          const label = best.score >= 0.85 ? "cite-only" : "auto-restore";
+          if (!PRAYER_KEY.test(best.key)) canonical.push(`(${ref})`);
+          const label = best.score >= 0.85 ? "near-canonical" : "auto-restore";
           console.log(`  ${label}: "${verseLines[0].slice(0, 60)}…" → ${ref} (score ${best.score.toFixed(2)}, via [unverified])`);
           identified.push({ reference: best.entry.reference || ref, score: best.score });
-          if (best.score >= 0.85) {
-            // Already canonical — just replace tag with reference
-            lines[tagIdx] = `(${ref})`;
-          } else {
-            // Garbled — replace tag + verse with canonical
-            lines.splice(tagIdx, i - tagIdx, ...canonical);
-            i = tagIdx + canonical.length;
-            restored++;
-          }
+          lines.splice(tagIdx, i - tagIdx, ...canonical);
+          i = tagIdx + canonical.length;
+          restored++;
           continue;
         }
       }
@@ -283,31 +302,81 @@ function autoRestoreFromCorpus(md) {
 
     const garbled = verseLines.join(" ");
 
-    // General corpus match first (full 26k+ entries)
+    // Prayer check — multi-line blocks only. Single-line "Hare Kṛṣṇa"
+    // or "oṁ namo" mixed with English falls through to general corpus,
+    // which rejects short mismatches via the length-ratio gate.
+    const earlyPrayerKey = verseLines.length > 1 ? looksLikeMangalacarana(garbled) : null;
+    if (earlyPrayerKey && CORPUS[earlyPrayerKey]) {
+      const pe = CORPUS[earlyPrayerKey];
+      const canonical = pe.text.split(/\r?\n/);
+      // Skip when heard text is already correct and LONGER than canonical
+      // — that means intentional repetition (triple oṁ namo, japa rounds),
+      // not a garble that needs restoration.
+      const hLen = stripDiacritics(garbled).replace(/\s/g, "").length;
+      const cLen = stripDiacritics(pe.text).replace(/\s/g, "").length;
+      if (hLen > cLen) {
+        const fg = ngrams(garbled), cg = ngrams(pe.text);
+        let hit = 0;
+        for (const g of fg) if (cg.has(g)) hit++;
+        if (fg.size > 0 && hit / fg.size >= 0.90) continue;
+      }
+      let spliceStart = verseStart;
+      if (verseStart > 0 && /\[unverified citation\]/i.test(lines[verseStart - 1])) {
+        spliceStart = verseStart - 1;
+      }
+      const pRef = pe.reference ? displayReference(pe.reference) : earlyPrayerKey;
+      console.log(`  prayer-restore: "${verseLines[0].slice(0, 60)}…" → ${pRef} (prayer match)`);
+      identified.push({ reference: pe.reference || pRef, score: 1.0 });
+      lines.splice(spliceStart, i - spliceStart, ...canonical);
+      i = spliceStart + canonical.length;
+      restored++;
+      // One-shot fragment removal: if next verse block is SHORTER than
+      // canonical AND mostly contained, it's a leftover stanza (e.g.
+      // praṇāma stanza 2). Full-length repeats (triple oṁ namo) kept.
+      let tail = i;
+      while (tail < lines.length && !lines[tail].trim()) tail++;
+      if (tail < lines.length && isVerseLine(lines[tail])) {
+        let blockEnd = tail;
+        while (blockEnd < lines.length && isVerseLine(lines[blockEnd])) blockEnd++;
+        if (blockEnd - tail < canonical.length) {
+          const fg = ngrams(lines.slice(tail, blockEnd).join(" "));
+          const cg = ngrams(pe.text);
+          let hit = 0;
+          for (const g of fg) if (cg.has(g)) hit++;
+          if (fg.size > 0 && hit / fg.size >= 0.80) {
+            lines.splice(tail, blockEnd - tail);
+          }
+        }
+      }
+      continue;
+    }
+
+    // General corpus match (full 26k+ entries)
     const q = ngrams(garbled);
     let best = null;
     for (const c of CORPUS_NGRAMS) {
       const s = jaccard(q, c.grams);
-      // Aliased verses tie EXACTLY (Śikṣāṣṭaka 3 and CC Antya-līlā 20.21 hold
-      // identical text), so iteration order would otherwise decide the label.
-      // On a tie, prefer the named work — that is what Mahārāja said and what
-      // a reader expects in the transcript. A strictly better score still wins.
       if (!best || s > best.score ||
-          (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key))) {
+          (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key)) ||
+          (Math.abs(s - best.score) < 0.02 && !CC_KEY.test(c.key) && CC_KEY.test(best.key))) {
         best = { score: s, entry: c.entry, key: c.key };
       }
     }
 
     if (best && best.score >= 0.85) {
-      // Verse is already canonical — don't rewrite, but resolve any
-      // [unverified citation] tag above it with the matched reference.
+      const ref = best.entry.reference ? displayReference(best.entry.reference) : best.key;
+      let spliceStart = verseStart;
       if (verseStart > 0 && /\[unverified citation\]/i.test(lines[verseStart - 1])) {
-        const ref = best.entry.reference ? displayReference(best.entry.reference) : best.key;
-        lines[verseStart - 1] = `(${ref})`;
-        console.log(`  cite-only: "${verseLines[0].slice(0, 60)}…" → ${ref} (score ${best.score.toFixed(2)})`);
-        identified.push({ reference: best.entry.reference || ref, score: best.score });
+        spliceStart = verseStart - 1;
       }
-      skipped++; continue;
+      const canonical = best.entry.text.split(/\r?\n/);
+      if (!PRAYER_KEY.test(best.key)) canonical.push(`(${ref})`);
+      console.log(`  near-canonical: "${verseLines[0].slice(0, 60)}…" → ${ref} (score ${best.score.toFixed(2)})`);
+      identified.push({ reference: best.entry.reference || ref, score: best.score });
+      lines.splice(spliceStart, i - spliceStart, ...canonical);
+      i = spliceStart + canonical.length;
+      restored++;
+      continue;
     }
 
     // Containment check (correct excerpt, not garbled). Floor is 0.35 to
@@ -360,15 +429,6 @@ function autoRestoreFromCorpus(md) {
       matchEntry = best.entry;
       matchRef = best.entry.reference ? displayReference(best.entry.reference) : best.key;
       matchMethod = `score ${best.score.toFixed(2)}`;
-    } else {
-      // Prayer fallback: bypasses the 0.40 threshold for the 6 known prayers.
-      // Safe because the candidate pool is tiny and every lecture opens with one.
-      const prayerKey = looksLikeMangalacarana(garbled);
-      if (prayerKey && CORPUS[prayerKey]) {
-        matchEntry = CORPUS[prayerKey];
-        matchRef = matchEntry.reference ? displayReference(matchEntry.reference) : prayerKey;
-        matchMethod = "prayer match";
-      }
     }
 
     if (!matchEntry) {
@@ -391,7 +451,7 @@ function autoRestoreFromCorpus(md) {
     }
 
     const canonical = matchEntry.text.split(/\r?\n/);
-    if (matchRef) canonical.push(`(${matchRef})`);
+    if (matchRef && !PRAYER_KEY.test(matchRef)) canonical.push(`(${matchRef})`);
 
     const label = matchMethod.startsWith("prayer") ? "prayer-restore" : "auto-restore";
     console.log(`  ${label}: "${verseLines[0].slice(0, 60)}…" → ${matchRef} (${matchMethod})`);
