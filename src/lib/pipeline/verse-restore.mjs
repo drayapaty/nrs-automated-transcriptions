@@ -269,7 +269,8 @@ function autoRestoreFromCorpus(md) {
           const s = jaccard(q, c.grams);
           if (!best || s > best.score ||
               (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key)) ||
-              (Math.abs(s - best.score) < 0.02 && !CC_KEY.test(c.key) && CC_KEY.test(best.key))) {
+              (Math.abs(s - best.score) < 0.02 && !CC_KEY.test(c.key) && CC_KEY.test(best.key) &&
+               jaccard(c.grams, best.entry ? ngrams(best.entry.text || "") : new Set()) >= 0.80)) {
             best = { score: s, entry: c.entry, key: c.key };
           }
         }
@@ -358,7 +359,8 @@ function autoRestoreFromCorpus(md) {
       const s = jaccard(q, c.grams);
       if (!best || s > best.score ||
           (s === best.score && NAMED_WORK.test(c.key) && !NAMED_WORK.test(best.key)) ||
-          (Math.abs(s - best.score) < 0.02 && !CC_KEY.test(c.key) && CC_KEY.test(best.key))) {
+          (Math.abs(s - best.score) < 0.02 && !CC_KEY.test(c.key) && CC_KEY.test(best.key) &&
+           jaccard(c.grams, best.entry ? ngrams(best.entry.text || "") : new Set()) >= 0.80)) {
         best = { score: s, entry: c.entry, key: c.key };
       }
     }
@@ -411,7 +413,7 @@ function autoRestoreFromCorpus(md) {
       ? stripDiacritics(best.entry.text).replace(/\s/g, "").length
       : 0;
     const lengthRatio = verseLen > 0 ? heardLen / verseLen : 0;
-    const longEnough = lengthRatio >= 0.40;
+    const longEnough = lengthRatio >= 0.40 && lengthRatio <= 1.50;
 
     // Gate: 0.40 outright, or 0.35 when the lengths are comparable. Admits 4
     // more correct BB verses across these lectures with no known false
