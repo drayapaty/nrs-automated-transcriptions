@@ -238,6 +238,8 @@ Tests: `scripts/test-verse-restore.mjs` 32/32 (was 29), incl. the greeting and d
 
 Commit: `54bdfe0`, pushed to main.
 
+**Fix 4 — Closing-chant false positive** (commit `346c1db`): multi-prayer closing lines (e.g. "Jaya Śrī Kṛṣṇa Caitanya…Hare Kṛṣṇa…Jaya Śrīla Prabhupāda kī jaya") were falsely matched to Pañca-tattva mantra or CC Antya 9.2 in the 0.35–0.40 Jaccard band. Root cause: length ratio guard only had lower bound (≥ 0.40). Added upper bound ≤ 1.50 — heard text 60% longer than canonical = not a garble of that verse. Also hardened CC_KEY tiebreaker to only fire for same-verse aliases (Jaccard between candidate texts ≥ 0.80). Final stats: 241 restored, 8 canonical, 241 identified across 35 BB files.
+
 ## 2026-08-02 — Evaluating gpt-4o-transcribe: standalone test script, not a pipeline swap
 
 User wants to try OpenAI's `gpt-4o-transcribe` as a possible alternative/addition to Groq Whisper-large-v3 (current primary) / Deepgram nova-3 (fallback).
