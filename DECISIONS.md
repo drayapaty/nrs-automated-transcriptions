@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-08-03 — Book chapter writing (step 4): first-person voiced variant added alongside plain version
+
+`write-chapter.ts` (first build) wrote third-person book-author prose ("Śrīla Sanātana Gosvāmī shows us..."). User corrected: **the book is authored BY Niranjana Swami himself — must be first person**, not a description of his teaching from outside.
+
+**Decision**: added `write-chapter-voiced.ts` / `write-chapter-voiced-cli.ts` / `/write-chapter-voiced` as a separate variant rather than replacing the original — kept `write-chapter.ts` for reference/comparison per explicit request ("keep the current version for reference and give me one with his actual voice").
+
+Voice calibrated against `ask-niranjana-swami/content/ebooks/Niranjana-Swami-Letters-Tone-and-Delivery-Notes.md` (sibling repo, built from his 5-volume Collected Letters) — but that profile is letters-voice (fixed salutations/sign-offs, restate-the-question format), not book-chapter voice. Adapted the underlying signatures (humility, Prabhupāda-anchored authority rather than independent assertion, gentle qualifiers, reasoned patience, prayer-closing) into first-person chapter prose rather than copying letter conventions literally. First test output (`2025_09_07_bb_1_1_12_chapter_voiced.md`) reads consistently first-person throughout, no third-person slippage.
+
+Still **unverified against real book material** — same caveat as the plain version, no sample manuscript pages exist to check against.
+
+## 2026-08-03 — Comparative analysis (step 3 of BB workflow): verse-anchored extraction, Vol.1-only
+
+Built `src/lib/pipeline/compare.ts` + `scripts/compare-cli.ts` + `.claude/commands/compare.md` to find lecture content not covered in Gopīparāṇadhana Dāsa's published Bṛhad-bhāgavatāmṛta commentary.
+
+**Decisions:**
+- **Vol.1 only.** The extracted library at `~/Downloads/FFF/SanatanaGoswami-extracted/md/` has two BB volumes, but Vol.2 there is Bhānu Svāmī's translation, not Gopīparāṇadhana's — different translator, out of scope for this specific comparison per the user's original spec (which names Gopīparāṇadhana specifically).
+- **Verse-anchored, not full-file.** Source file is 75,258 lines / ~2,500 verses. Extraction uses the file's own `## BB {part}.{chapter}.{verse}` headers (verse may be a range like "15-17") to slice just the matching section — full-file context per call would be wasteful and unnecessary.
+- **Filename-driven verse range, with explicit override.** Of the 35 restored BB files, only 18 have a parseable `bb_<part>_<chapter>_<start>[_<end>]` verse range in the filename; the rest are topical talks with no sequential verse anchor and are out of scope for this step. CLI accepts explicit part/chapter/verse args as a fallback for files that don't follow the naming convention.
+- **Source file never committed** — BBT copyrighted text, referenced by absolute path outside the repo.
+
+## 2026-08-03 — Lecture summary spec: new file, don't overwrite old one; structure follows the lecture
+
+Old `scripts/SUMMARY_PROMPT.md` (rigid verse-by-verse "Text N" template with
+fixed metadata header) does not match the user's real hand-written Evernote
+summaries. Compared 4 real samples (BB Vol.1 Ch.2-3, Śiva-tattva lectures).
+
+**Decision**: wrote `scripts/SUMMARY_PROMPT_V2.md` as a new file rather than
+overwriting `SUMMARY_PROMPT.md` — user explicitly asked not to overwrite if a
+summary spec already exists. Old file kept as stale reference.
+
+**Structural finding**: real summaries do NOT share one rigid skeleton. Some
+organize by theme (numbered sections, each pulling in cross-references); one
+organizes strictly by verse number (Text 81, Text 82, ...). Which shape fits
+depends on how the lecture was delivered (sequential verse-by-verse vs. a
+topic ranging across multiple verses/pastimes) — the generation prompt must
+decide shape from the transcript itself, not force a fixed template. Common
+across all 4: no fixed metadata header block, recap-of-previous-class near the
+top, and a final takeaways section whose heading wording varies per lecture
+(not a fixed label).
+
 ## 2026-08-02 — Zoom-class distribution pipeline: architecture (in progress)
 
 New pipeline for Mahārāja's Zoom classes: given the raw audio file (however it's obtained — out of scope), fan it out to two destinations automatically.
