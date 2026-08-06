@@ -4,7 +4,7 @@ Step 3 of the BB lecture workflow: find points in NRS's lecture that aren't cove
 
 ## Input
 
-The user provides a path to a lecture summary `.md` file (typically `*_summary.md` from `/summarize`).
+The user provides a path to a lecture summary `.md` file (typically `*_summary.md` from `/nrs-summarize`).
 
 Only applies to lectures that read through a sequential BB verse range (filenames like `..._bb_1_2_14_18_...`). Topical/thematic talks (no verse range in the filename) aren't supported by this step — say so and skip if the filename doesn't match.
 

@@ -53,8 +53,21 @@ async function main() {
     });
     audioBuf = readFileSync(tmpMp3);
   } else {
-    audioBuf = readFileSync(input);
     slug = input.replace(/.*\//, "").replace(/\.[^.]+$/, "").replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+
+    // transcribeWithGroqChunked assumes MP3 (parses MP3 frame headers for
+    // bitrate/chunking) — non-MP3 local inputs (e.g. Zoom's M4A) must be
+    // converted first, same as the YouTube path already does via yt-dlp.
+    if (/\.mp3$/i.test(input)) {
+      audioBuf = readFileSync(input);
+    } else {
+      console.log(`\n=== Converting to MP3 (${input.replace(/.*\./, "")} input) ===`);
+      const tmpMp3 = `/tmp/nrs_cli_${slug}.mp3`;
+      execSync(`ffmpeg -y -i "${input}" -codec:a libmp3lame -qscale:a 4 "${tmpMp3}"`, {
+        stdio: "inherit",
+      });
+      audioBuf = readFileSync(tmpMp3);
+    }
   }
 
   console.log(`Audio: ${(audioBuf.length / 1024 / 1024).toFixed(1)} MB`);

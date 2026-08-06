@@ -4,6 +4,67 @@
 
 ---
 
+## 2026-08-06 — Zoom fetch formalized as a real pipeline step
+
+Following the manual curl-based fetch earlier today, formalized into
+`src/lib/pipeline/fetch-zoom.ts` + `scripts/fetch-zoom-cli.ts` +
+`.claude/commands/fetch-zoom.md` + `~/.claude/skills/fetch-zoom-lecture/`
+— same 4-piece pattern as every other pipeline step (transcribe, summarize,
+compare, write-chapter[-voiced]).
+
+**Implementation choices:**
+- `ZOOM_LECTURE_EMAIL` defaults to `nrs@niranjanaswami.com` (the only Zoom
+  user-scoped email that worked — `swami@niranjanaswami.{org,com}` both
+  returned "User does not exist") via env var with that hardcoded fallback,
+  not required in `.env.local`.
+- Lists recordings over a 7-day trailing window (Zoom's API requires a
+  bounded date range), sorts newest-first, takes the top result's
+  `audio_only` file only — matches the "default to latest, no confirmation"
+  rule from earlier today.
+- If more than one meeting shares the latest meeting's calendar day, returns
+  `ambiguous: true` + a count rather than silently guessing — CLI surfaces
+  this as a warning instead of blocking.
+- Output convention: `~/Downloads/<date>_zoom_<sanitized-topic>.m4a`.
+- Video recording files (`active_speaker`/`gallery_view` MP4, ~2.8 GB for a
+  3-hour class) are never fetched by this step — separate Google Drive
+  backup plan noted in `ZOOM-PIPELINE.md` TODO, not built yet.
+
+Verified: re-running the CLI reproduced the same file/result as the earlier
+manual fetch (Japa Session Final, 2026-08-06), 4.9s, no ambiguity warning.
+
+## 2026-08-06 — Zoom fetch: default to latest recording, no confirmation needed
+
+First successful fetch (`nrs@niranjanaswami.com`, "Japa Session Final",
+2026-08-06) required back-and-forth to identify the right meeting and file
+type. Divakar clarified: once Zoom has finished processing, whenever
+Mahārāja asks to grab the file, default to the **latest recording** on the
+account automatically — no need to list/confirm which meeting or ask
+permission first.
+
+**Decision**: future fetches should query recordings sorted by most recent
+`start_time` and take the top result's `audio_only` (M4A) file directly,
+skip the discussion step for meeting identity. Still worth a quick sanity
+check if there are multiple recordings on the same day (ambiguous "latest"),
+but the single-recording-per-day case (the common one) should just execute.
+
+## 2026-08-06 — Zoom pipeline scope change: auto-fetch via API, not manual hand-off
+
+`ZOOM-PIPELINE.md` (design doc, not yet built) explicitly scoped "getting the
+audio file itself... out of scope," assuming a person manually exports the
+Zoom recording and hands off a local file. Divakar provided Zoom Server-to-
+Server OAuth app credentials (Account ID, Client ID, Client Secret) —
+confirmed intent: auto-fetch recordings via Zoom's API instead of manual
+export.
+
+**Decision**: credentials stored in `.env.local` (gitignored, not committed)
+as `ZOOM_ACCOUNT_ID` / `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET`. `ZOOM-
+PIPELINE.md` itself not yet updated to reflect this scope change — still
+describes the old manual-hand-off architecture. Needs a rewrite before the
+fetch leg is implemented, so the doc doesn't mislead about what's in/out of
+scope.
+
+---
+
 ## 2026-08-03 — Book chapter writing (step 4): first-person voiced variant added alongside plain version
 
 `write-chapter.ts` (first build) wrote third-person book-author prose ("Śrīla Sanātana Gosvāmī shows us..."). User corrected: **the book is authored BY Niranjana Swami himself — must be first person**, not a description of his teaching from outside.

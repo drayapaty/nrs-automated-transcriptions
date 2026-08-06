@@ -14,6 +14,10 @@
  */
 
 import { deepgramKeys, groq, groqKeys, rotateGroqKey } from "../clients";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // Whisper `prompt` field — biases decoding toward Vaiṣṇava vocabulary AND
 // verse-shape audio. Whisper's prompt cap is ~224 tokens; we include a noun
@@ -21,7 +25,7 @@ import { deepgramKeys, groq, groqKeys, rotateGroqKey } from "../clients";
 // empirically: including sample verses makes Whisper preserve verse-length
 // Sanskrit that the noun-only version silently drops (Maharaja's SB 11.14.15
 // citation was dropped by noun-only prompt, preserved when sample verses added).
-const SANSKRIT_PROMPT =
+export const SANSKRIT_PROMPT =
   // Nouns / concepts (~40 terms)
   "Srimad Bhagavatam, Bhagavad-gita, Caitanya-caritamrita, Brihad-bhagavatamrita, " +
   "Krishna, Krsna, Srila Prabhupada, Hare Krishna, Caitanya Mahaprabhu, Nityananda, " +
@@ -255,6 +259,37 @@ function detectMp3BitrateKbps(buf: Buffer): number {
 
 const TARGET_CHUNK_SECS = 120; // 2 minutes — empirically optimal
 
+function checkpointPath(audio: Buffer): string {
+  const hash = createHash("sha256").update(audio).digest("hex").slice(0, 16);
+  return join(tmpdir(), `nrs_groq_checkpoint_${hash}.json`);
+}
+
+function loadCheckpoint(path: string): string[] {
+  if (!existsSync(path)) return [];
+  try {
+    const data = JSON.parse(readFileSync(path, "utf-8"));
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCheckpoint(path: string, texts: string[]): void {
+  try {
+    writeFileSync(path, JSON.stringify(texts));
+  } catch (err) {
+    console.warn(`[groq] failed to write checkpoint: ${(err as Error).message}`);
+  }
+}
+
+function clearCheckpoint(path: string): void {
+  try {
+    if (existsSync(path)) unlinkSync(path);
+  } catch {
+    // non-fatal — a stray checkpoint file just gets ignored/overwritten next run
+  }
+}
+
 export async function transcribeWithGroqChunked(
   audio: Buffer
 ): Promise<TranscriptionResult> {
@@ -288,8 +323,19 @@ export async function transcribeWithGroqChunked(
     `${chunks.length} × ~${TARGET_CHUNK_SECS}s chunks (${(chunkBytes / 1024).toFixed(0)} KB each)`
   );
 
-  const texts: string[] = [];
-  for (let i = 0; i < chunks.length; i++) {
+  // Checkpoint by content hash so a re-invocation on the SAME audio (e.g.
+  // after a late-chunk failure kills the process) resumes instead of
+  // re-transcribing everything from scratch. One entry per outer chunk
+  // index (sub-split chunks get joined before storing) so the checkpoint
+  // array always lines up 1:1 with `chunks`.
+  const cpPath = checkpointPath(audio);
+  const texts: string[] = loadCheckpoint(cpPath);
+  if (texts.length > 0) {
+    console.log(`[groq] resuming from checkpoint: ${texts.length}/${chunks.length} chunks already done`);
+  }
+
+  for (let i = texts.length; i < chunks.length; i++) {
+    let chunkText: string;
     if (chunks[i].byteLength > GROQ_MAX_BYTES) {
       // Chunk exceeds Whisper limit (very high bitrate) — sub-split by bytes
       const subChunks: Buffer[] = [];
@@ -297,17 +343,24 @@ export async function transcribeWithGroqChunked(
       for (let j = 0; j < chunks[i].byteLength; j += subSize) {
         subChunks.push(chunks[i].subarray(j, Math.min(j + subSize, chunks[i].byteLength)));
       }
+      const subTexts: string[] = [];
       for (let s = 0; s < subChunks.length; s++) {
         const r = await transcribeWithGroq(subChunks[s], `chunk_${i}_${s}.mp3`);
-        texts.push(r.text);
+        subTexts.push(r.text);
       }
+      chunkText = subTexts.join(" ");
     } else {
       const r = await transcribeWithGroq(chunks[i], `chunk_${i}.mp3`);
-      texts.push(r.text);
+      chunkText = r.text;
     }
+    texts.push(chunkText);
+    saveCheckpoint(cpPath, texts);
     // Pace requests to avoid rate limits (1s between chunks)
     if (i < chunks.length - 1) await sleep(1000);
   }
+
+  // Full run completed — checkpoint no longer needed.
+  clearCheckpoint(cpPath);
   return { text: texts.join(" "), provider: "groq" };
 }
 
@@ -356,6 +409,22 @@ export async function transcribeWithGroq(
           continue;
         }
         const waitMs = Math.min(60_000 * 2 ** (attempt - 1), 300_000);
+        await sleep(waitMs);
+        continue;
+      }
+
+      // Transient network/server errors (timeouts, connection resets, 5xx) —
+      // retry with backoff instead of failing the whole chunked run on one
+      // blip. A 186-min lecture makes ~90 sequential Groq calls; without
+      // this, any single timeout anywhere in that sequence kills the run.
+      const isTransient =
+        status >= 500 ||
+        /timeout|timed out|ECONNRESET|ETIMEDOUT|ENOTFOUND|fetch failed/i.test(msg);
+      if (isTransient && attempt < MAX_RETRIES) {
+        const waitMs = Math.min(5_000 * 2 ** (attempt - 1), 60_000);
+        console.warn(
+          `[groq] transient error (attempt ${attempt}/${MAX_RETRIES}): ${msg || status}. Retrying in ${waitMs}ms.`
+        );
         await sleep(waitMs);
         continue;
       }
