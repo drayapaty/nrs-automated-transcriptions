@@ -4,6 +4,132 @@
 
 ---
 
+## 2026-08-06 — Elaborate step (step 4 proper) built and fixed end-to-end
+
+New tool implementing Mahārāja's own verbatim 4-point spec for step 4
+(see `scripts/ELABORATE_REQUIREMENTS.md`) — distinct from `write-chapter`/
+`write-chapter-voiced`. `src/lib/pipeline/elaborate.ts` +
+`scripts/elaborate-cli.ts`. Output: Part 1 (edited transcript excerpt, not
+a summary), Part 2 (genuine parallels from his own books/lectures), Part 3
+(suggested elaboration angle per topic).
+
+Bugs found and fixed while getting this working, in order:
+
+1. **Env-var load order.** Top-level `const OPENSEARCH_URL = process.env...`
+   captured `undefined` because static ES module imports evaluate before
+   the importing CLI's `dotenv.config()` runs, regardless of source-line
+   order. Fixed: read `process.env.*` lazily inside a function
+   (`openSearchConfig()`), matching the existing `clients.ts` pattern.
+2. **TLS on self-signed cert.** OpenSearch host `148.251.70.122:9200` uses
+   a self-signed cert; fetch() failed with a bare "fetch failed" until
+   `process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"` was set before the
+   request (matches `ask-niranjana-swami/src/lib/opensearch.ts`'s existing
+   handling of the same server).
+3. **max_tokens too low.** `8_000` truncated Opus 5/Haiku 4.5 mid-Part-1
+   (confirmed via `stop_reason`/content-block debug logging) — raised to
+   `16_000`.
+4. **Lecture-note artifacts leaking into book text.** Output said "in our
+   last class," "we will begin our next class" — copied straight from the
+   transcript's spoken framing. This is book text, not a lecture transcript.
+   Added an explicit CONTENT RULES line banning "class"/"the speaker says"
+   phrasing.
+
+**Search corpus expanded to books + lectures + Queen Kunti series**,
+per Mahārāja's explicit request (his point 3 spec already said "lectures
+or books," an earlier books-only restriction was a session simplification,
+not his spec). Index `ask-nrs-lectures` has `source_type: book|lecture`,
+`lecture_date_year`, `topic_en`. New pool: all books, all lectures from
+2000 onward, plus a dedicated always-run mini-search against lectures that
+cite the "Teachings of Queen Kunti" book.
+
+**Queen Kunti retrieval bug**: `topic_en == "Teachings of Queen Kunti"`
+only tags the ONE lecture literally titled after that book (Sept 1, 2013,
+Almaty) — not the ~12 other lectures that cite/quote the book while tagged
+under their own topic (an SB 1.8.21 class, a BG 12.9 class, etc). Confirmed
+against askniranjanaswami.com's own citation search (2026-08-06 screenshot,
+15 lectures + 2 books found). Filtering on `topic_en` alone missed nearly
+all of them. Fixed: filter on the phrase itself (`match_phrase` on
+content/title for "Teachings of Queen Kunti" / "Queen Kunti's prayers"),
+`topic_en` term kept as one more `should` clause, not the sole filter.
+
+**Part 2 also written to its own file** (`*_elaborate_part2.md`), split
+from the main `*_elaborate.md` output, per Mahārāja's request — main file
+unchanged, still has all 3 parts.
+
+## 2026-08-06 — Hard rule: never abridge/edit book-voice text by hand, always regenerate through the model
+
+Mahārāja's own feedback on a hand-abridged Part 1: "he does not carry his
+voice." Root cause: manually cutting his first-person prose for length
+strips the personal reflective transitions first ("I find it worth pausing
+here," "I am reminded here of," "I hold this close to heart") since they
+read as compressible filler — but those transitions ARE the voice; without
+them the text degrades into a third-person digest, exactly the failure mode
+his point 2 (elaborate spec) warns against.
+
+**Rule, no exceptions**: any shortening, editing, or reformatting of text
+written in Mahārāja's first-person book voice — abridging, trimming,
+tightening — must go back through the model with the full VOICE calibration
+(see `elaborate.ts` / `write-chapter-voiced.ts` VOICE sections) as an
+explicit instruction to preserve, not through manual/mechanical editing.
+User confirmed 2026-08-06: "Always maintain his voice please, do not
+deviate, we established rule, no compromise."
+
+## 2026-08-06 — Fixed stale CLAUDE_MODEL override in .env.local
+
+`.env.local` had `CLAUDE_MODEL="claude-sonnet-4-5"`, overriding the code's
+correct default of `claude-sonnet-4-6`. This exact bug was already flagged
+in `SESSION-HANDOFF-2026-08-02.md` ("do NOT set CLAUDE_MODEL... if a
+previous .env.local exists with CLAUDE_MODEL=claude-sonnet-4-5, that is a
+bug — delete it") but had crept back in and gone unnoticed. Every
+summarize/compare/write-chapter/write-chapter-voiced/elaborate call this
+session (2026-08-06) ran on the wrong, lower-quality model as a result.
+
+**Decision**: removed the line entirely from `.env.local`. Do not re-add a
+`CLAUDE_MODEL` override — the code default is correct.
+
+## 2026-08-06 — Two-path Evernote-summary test: Path 2 wins decisively
+
+Tested both candidate paths from the "Evernote summary input" open item
+(see `scripts/ELABORATE_REQUIREMENTS.md`) on the same real lecture
+(2026-08-06 class, clean/no-japa source from Mahārāja's manual edit,
+`~/Downloads/08-06-26.mp3`):
+
+- **Path 1** (raw Zoom audio attached directly, Evernote's own native
+  Transcribe): **failed badly**. Evernote auto-detected the spoken-language
+  as Russian (`wasLanguageAutoDetected:true, transcribedLanguages:["ru"]`)
+  despite the lecture being almost entirely English — produced a garbled,
+  largely unusable phonetic Russian transcript of English/Sanskrit speech
+  ("Hare Kṛṣṇa" → "Бхарати Гришна!"). Confirmed via `get_note`'s
+  `--en-transcription` JSON blob.
+- **Path 2** (our own pipeline's already-cleaned/verse-restored transcript
+  pasted as the note body, Evernote's AI Assistant asked to summarize only
+  — no native Transcribe involved): **succeeded**. Produced a draft good
+  enough that Mahārāja edited it into a finished, well-structured summary
+  (thematic sections, correct verse citations, no garbling) — the pasted
+  final version is his edit, not raw AI output, but the draft was
+  clearly usable as a starting point, unlike Path 1's output which wasn't
+  salvageable at all.
+
+**Decision**: Path 2 is the standing approach — feed Evernote our own
+pipeline's transcript text, never the raw audio, for the Evernote-summary
+leg of the BB workflow. Path 1 (native audio transcribe) is not viable for
+this pipeline given the language-misdetection failure mode observed here.
+
+**UI note for the `evernote-audio-note` skill**: the AI Assistant chat input
+is an `<openai-chatkit>` custom element with a shadow root that browser
+automation (Chrome MCP) could not reliably click/type into across many
+attempts — confirmed via JS (`document.activeElement` inspection) that
+clicks were landing on the right visual spot but not focusing the real
+input inside the shadow DOM. The reliable trigger is the **floating
+bottom-right sparkle/diamond button** (opens the panel fresh, bound to the
+current note) — clicking the top-bar "Ask AI Assistant" chip on an
+already-open but stale panel (e.g. left over from viewing a different note)
+does not reliably work via automation. Even after finding the right button,
+typing into the chat input itself remained unreliable via automation in
+this session — ended up needing the user to type the summary request
+manually. Worth revisiting with a fresh approach (e.g. `key`-by-key input
+instead of bulk `type`) before relying on this automated end-to-end.
+
 ## 2026-08-06 — Zoom fetch formalized as a real pipeline step
 
 Following the manual curl-based fetch earlier today, formalized into
