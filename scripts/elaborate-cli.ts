@@ -24,6 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, "..", ".env.local") });
 
 import { elaborate } from "../src/lib/pipeline/elaborate";
+import { abridge } from "../src/lib/pipeline/abridge";
 
 async function main() {
   const restoredPath = process.argv[2];
@@ -72,12 +73,59 @@ async function main() {
   console.log(`Output: ${output.length} chars (${elapsed}s)`);
   console.log(`  → ${outPath}`);
 
-  // Part 2 (book/lecture parallels) also gets its own file, per Mahārāja's request.
+  // Part 1, Part 2, Part 3 each also get their own standalone file, per
+  // Divakar's request (2026-08-07) — same content as inside _elaborate.md,
+  // just split out for convenience.
+  const part1Match = output.match(/## Part 1[\s\S]*?(?=\n## Part 2|$)/);
+  if (part1Match) {
+    const part1Path = summaryPath.replace(/\.md$/, "_part-1.md");
+    writeFileSync(part1Path, part1Match[0].trim() + "\n");
+    console.log(`  → ${part1Path} (Part 1 only, full length)`);
+  }
+
   const part2Match = output.match(/## Part 2[\s\S]*?(?=\n## Part 3|$)/);
   if (part2Match) {
-    const part2Path = summaryPath.replace(/\.md$/, "_elaborate_part2.md");
+    const part2Path = summaryPath.replace(/\.md$/, "_part-2.md");
     writeFileSync(part2Path, part2Match[0].trim() + "\n");
     console.log(`  → ${part2Path} (Part 2 only)`);
+  }
+
+  const part3MatchEarly = output.match(/## Part 3[\s\S]*$/);
+  if (part3MatchEarly) {
+    const part3Path = summaryPath.replace(/\.md$/, "_part-3.md");
+    writeFileSync(part3Path, part3MatchEarly[0].trim() + "\n");
+    console.log(`  → ${part3Path} (Part 3 only)`);
+  }
+
+  // Abridged Part 1 companion, always generated alongside the full output —
+  // standing convention per Divakar, 2026-08-06 (see DECISIONS.md).
+  let abridgedPart1 = "";
+  if (part1Match) {
+    const t1 = Date.now();
+    abridgedPart1 = await abridge(part1Match[0].trim());
+    const abridgedElapsed = ((Date.now() - t1) / 1000).toFixed(1);
+    const abridgedPath = summaryPath.replace(/\.md$/, "_abridged_part1.md");
+    writeFileSync(abridgedPath, abridgedPart1);
+    console.log(`  → ${abridgedPath} (Part 1, abridged, ${abridgedElapsed}s)`);
+  }
+
+  // Two combined files — always generated, standing convention per Divakar,
+  // 2026-08-07: one with the full-length Part 1, one with the abridged Part 1.
+  const part3Match = part3MatchEarly;
+  if (part1Match && part2Match && part3Match) {
+    const fullCombined =
+      `${part1Match[0].trim()}\n\n---\n\n${part2Match[0].trim()}\n\n---\n\n${part3Match[0].trim()}\n`;
+    const fullCombinedPath = summaryPath.replace(/\.md$/, "_elaborate_combined.md");
+    writeFileSync(fullCombinedPath, fullCombined);
+    console.log(`  → ${fullCombinedPath} (Part 1 full + Part 2 + Part 3, combined)`);
+  }
+  if (abridgedPart1 && part2Match && part3Match) {
+    const abridgeCombined =
+      `## Part 1 — Elaboration (abridged)\n\n${abridgedPart1.trim()}\n\n---\n\n` +
+      `${part2Match[0].trim()}\n\n---\n\n${part3Match[0].trim()}\n`;
+    const abridgeCombinedPath = summaryPath.replace(/\.md$/, "_abridged_combined.md");
+    writeFileSync(abridgeCombinedPath, abridgeCombined);
+    console.log(`  → ${abridgeCombinedPath} (Part 1 abridged + Part 2 + Part 3, combined)`);
   }
 }
 

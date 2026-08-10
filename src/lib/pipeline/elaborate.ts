@@ -272,7 +272,7 @@ Produce output with exactly these parts, in this order:
 ## Part 1 — Elaboration
 This is the bulk of the output. Provide the elaboration contextually from his presentation — NOT a summary. Take what he actually said in the TRANSCRIPT and produce an EDITED version of it: trim filler, false starts, and repetition, but preserve his real words, his real explanations, his real train of thought and structure. Do not condense his points into a synopsis — keep the actual content and phrasing, just cleaned up. Full first-person prose, in his voice (see VOICE below).
 
-## Part 2 — Other examples on this topic (from his books and lectures)
+## Part 2 — Other examples on this topic (from Mahārāja's books and lectures)
 Look through the SOURCE SEARCH RESULTS. For each topic covered in the lecture, list any genuine parallel example, analogy, or teaching he has used elsewhere — in his own books, in a lecture from 2000 onward, or in his "Teachings of Queen Kunti" series — on the same topic. Cite the title, whether it's a book or lecture, and the year if given for lectures. Be honest: if a search result is just a coincidental keyword match and not a real parallel, leave it out. If no genuine parallel exists for a topic, say so plainly ("I did not find another example of this in the searched sources") rather than inventing one. List separately per topic if the lecture covers more than one.
 
 ## Part 3 — Suggested best version for elaborating this topic

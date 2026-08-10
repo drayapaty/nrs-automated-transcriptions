@@ -1,38 +1,67 @@
 /**
  * Generate an Evernote-style lecture summary from a cleaned/verse-restored
- * transcript using Claude. Spec: scripts/SUMMARY_PROMPT_V2.md (NOT the stale
- * SUMMARY_PROMPT.md — that rigid verse-by-verse template doesn't match the
- * user's real hand-written summaries).
+ * transcript using Claude. Spec: scripts/SUMMARY_PROMPT_V3.md — a FIXED
+ * template (no per-lecture shape adaptation), learned from two real
+ * Evernote AI Assistant summaries (2026-08-07). Supersedes
+ * SUMMARY_PROMPT_V2.md's adaptive-shape approach per Divakar's explicit
+ * instruction: "no deviations from the template."
  */
 
 import { anthropic, CLAUDE_MODEL } from "../clients";
 
-const SUMMARY_SYSTEM_PROMPT = `You are summarizing a lecture by His Holiness Niranjana Swami on Bṛhad-bhāgavatāmṛta (or other scripture as applicable), matching the style of the user's own hand-written Evernote summaries.
+const SUMMARY_SYSTEM_PROMPT = `You are summarizing a lecture by His Holiness Niranjana Swami on Bṛhad-bhāgavatāmṛta (or other scripture as applicable), matching the real Evernote AI Assistant summary format exactly.
 
-First, decide the summary's shape from the transcript itself:
-- If the lecture proceeds verse-by-verse through a sequence of numbered texts, each getting substantial independent commentary, organize the summary by verse number ("Text 81", "Text 82", ...).
-- If the lecture ranges thematically across a topic, pulling multiple verses and pastimes into service of a few larger ideas, organize the summary by numbered theme sections instead.
+Structure: pure numbered flow, following the class's actual chronological order. There are NO fixed section labels — no "Context & aim," no "Recap of the previous class," no "Reading:," no "Highlights from the commentary," no "Illustrations used," no "Theme:". Instead:
 
-Do not force a template that doesn't fit the actual lecture structure.
+- Break the class into as many numbered sections as its actual content naturally falls into (typically 8-13 for a full class), each with its own short, plain, content-specific title describing what that section covers. EVERY numbered section title MUST be a markdown heading — "## 1) Setting and continuity with the previous class", "## 4) Commentary points: intimacy in devotion and ecstasy from 'simple' offerings", "## 8) Lord Śiva as the greatest Vaiṣṇava (distinct from Viṣṇu yet deeply devoted)". Never write a bare "1) Title" line with no "## " — without a heading marker it gets misread as an ordered-list item and nests underneath whatever came before instead of standing as its own section, breaking the whole document's indentation.
+- The opening class-recap and greeting typically belong inside section 1, not a separate section.
+- The reading of the verses, the commentary drawn from them, and the illustrations/examples used to support a point are NOT separated into different boxes — each appears inside whichever numbered section it naturally occurs in, in the order the class actually covers it.
+- When a numbered section contains multiple distinct sub-points (e.g. several separate illustrations, or several supporting scriptural references), break those out as lettered sub-headings within that section, one heading level below the numbered section: "### A. ...", "### B. ...", "### C. ...", each followed by its own bullets. Same rule as above — these must be real "### " headings, not bare "A. Title" text lines.
+- The final numbered section is the conclusion: how the class ended and what's previewed for next time, as concretely as the transcript states it.
+- Do not omit thin content — if a beat is brief, give it a brief bullet or a short section, but do not skip it.
 
-Structure:
-- Open with a recap of the previous class (prose + bullets), establishing narrative continuity.
-- For each unit (verse or theme), include whichever of these actually apply: core point/claim, the speaker's explanation (with lettered A/B/C sub-points when the speaker is contrasting angles), commentary themes from the purport, related narrative references or parallel pastimes, and scriptural citations quoted in the lecture.
-- Close with how the class ended and what's previewed for next time.
-- End with a final takeaways section synthesizing the lecture's main points — choose a heading that fits (e.g. "Key takeaways", "Main takeaways", or a lecture-specific phrase) rather than reusing the same label every time.
-
-Rules:
-- Use bullet points for scannability, not prose paragraphs.
-- Include ALL Sanskrit citations and quoted verses (both Sanskrit and English translation) that the lecture actually quotes.
+Formatting rules:
+- Refer to him as "Niranjana Swami" throughout — not "the speaker," not "Mahārāja."
+- IAST diacritics always: Kṛṣṇa, Śiva, Brahmā, Prabhupāda, Bhāgavatam, etc., even if the source material uses plain ASCII.
 - Bold key Sanskrit terms and technical categories on first use.
-- Maintain proper IAST diacritics throughout, even if source material uses plain ASCII.
-- Capture philosophical points, not just narrative.
-- Note cross-references to other scriptures (SB, BG, Padma Purāṇa, etc.) and named parallel pastimes the speaker invokes as illustrations.
-- Do not add a fixed metadata header block (Lecture by/Location/Date) unless that information is clearly present and useful.
+- English only for verses/citations — no Sanskrit/Devanagari/IAST verse blocks. Give the English translation or a close paraphrase of what the verse says, in quotation marks if it's presented as a direct quote. None of the real samples include Sanskrit verse text.
+- Bullet points for scannability, not prose paragraphs; nested (indented) sub-bullets within a section where helpful — preserve this nesting exactly, don't flatten multi-level lists into a single level. Every nested sub-item MUST be its own markdown list line, formatted exactly as "  - ◦ text" (two-space indent, dash, space, hollow bullet ◦, space, text) — the dash is required for markdown to treat it as a real list item (a hollow bullet with no dash renders as a continuation of the parent paragraph, not a separate line); the ◦ is required so the nested level reads visually distinct from the parent's filled bullet. This is a permanent formatting rule — do not drop the ◦ character.
+- Direct speech and quoted phrases from the speaker go in quotation marks, verbatim, exactly as said — don't paraphrase what's actually a quote.
+- No fixed metadata header block (no "Lecture by/Location/Date" box).
+- Omit generic boilerplate that isn't specific to this lecture's actual content: no bullet noting that Bṛhad-bhāgavatāmṛta references are brief pointers to fuller Śrīmad-Bhāgavatam treatments (only include this if the class makes a specific new point about it), and no bullet just listing the opening prayers offered (oṁ namo bhagavate vāsudevāya, guru-vandanā, Prabhupāda praṇāma-mantra, etc.) unless something about that moment is actually distinctive to this class. These are ritual constants present in nearly every class and add no lecture-specific information — none of the real samples include them.
 
 The summary should be comprehensive enough that someone who missed the class can understand all key points discussed.
 
-Return ONLY the summary. No preamble, no "Here is the summary" — start directly with the content.`;
+Return ONLY the summary. No preamble, no "Here is the summary" — start directly with section 1.`;
+
+/**
+ * Force a hollow bullet ("◦") onto every nested (indented) markdown list
+ * line. The model doesn't apply this consistently on its own (confirmed
+ * 2026-08-07: 25/31 nested lines missing it in one test run) — enforced
+ * here deterministically instead of relying on prompt compliance. Only
+ * touches indented "- " lines (nested sub-items); top-level bullets are
+ * left alone. Idempotent — already-correct "- ◦ " lines are untouched.
+ */
+function enforceHollowNestedBullets(text: string): string {
+  return text.replace(/^(\s{2,})-\s+(?!◦)/gm, "$1- ◦ ");
+}
+
+/**
+ * Force numbered section titles ("1) Title") and lettered sub-point titles
+ * ("A. Title") onto real markdown headings ("## 1) Title" / "### A.
+ * Title"). Without a heading marker, a bare "1) Title" line at the start
+ * of a paragraph gets misread by markdown renderers as an ordered-list
+ * item and silently nests under whatever came before it, wrecking the
+ * whole document's indentation (confirmed 2026-08-07 from a real render).
+ * Only touches lines that are the start of a section (short line, title
+ * case, no existing "#"), not every "1)" that might appear inline in body
+ * text.
+ */
+function enforceSectionHeadings(text: string): string {
+  return text
+    .replace(/^(?!#)(\d+\))\s+(\S.*)$/gm, "## $1 $2")
+    .replace(/^(?!#)([A-Z]\.)\s+(\S.*)$/gm, "### $1 $2");
+}
 
 export async function generateSummary(cleanedTranscript: string): Promise<string> {
   const response = await anthropic().messages.create({
@@ -49,5 +78,5 @@ export async function generateSummary(cleanedTranscript: string): Promise<string
   const block = response.content.find((b) => b.type === "text");
   const text = (block as { text?: string } | undefined)?.text;
   if (!text) throw new Error("Summary generation returned no text");
-  return text;
+  return enforceHollowNestedBullets(enforceSectionHeadings(text));
 }

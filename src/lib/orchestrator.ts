@@ -17,6 +17,7 @@ import { putLecture } from "./lectures";
 import { transcribe } from "./pipeline/transcribe";
 import { cleanupTranscript } from "./pipeline/cleanup";
 import { restoreVerses } from "./pipeline/verse-restore.mjs";
+import { stripFabricatedPranama } from "./pipeline/strip-fabricated-pranama";
 import { translate } from "./pipeline/translate";
 import { indexTranscript } from "./pipeline/index-opensearch";
 import { sendCompletionEmail, sendFailureEmail } from "./email";
@@ -62,7 +63,17 @@ export async function runPipeline(job: Job): Promise<void> {
       englishText = await cleanupTranscript(tr.text);
     }
 
-    // -- Stage 3b: verse-restore (deterministic corpus match, no LLM) ------
+    // -- Stage 3b: strip fabricated praṇāma (deterministic, no LLM) ---------
+    const { text: strippedText, stripped: pranamaStripped } =
+      stripFabricatedPranama(tr.text, englishText);
+    if (pranamaStripped > 0) {
+      console.log(
+        `[strip-pranama] removed ${pranamaStripped} fabricated praṇāma block(s)`
+      );
+    }
+    englishText = strippedText;
+
+    // -- Stage 3c: verse-restore (deterministic corpus match, no LLM) ------
     const { text: restoredText, stats: verseRestoreStats } =
       restoreVerses(englishText);
     englishText = restoredText;

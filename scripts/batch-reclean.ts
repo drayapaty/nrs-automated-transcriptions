@@ -17,6 +17,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, "..", ".env.local") });
 
 import { cleanupTranscript } from "../src/lib/pipeline/cleanup";
+import { stripFabricatedPranama } from "../src/lib/pipeline/strip-fabricated-pranama";
 import { restoreVerses } from "../src/lib/pipeline/verse-restore.mjs";
 
 async function main() {
@@ -67,10 +68,17 @@ async function main() {
     try {
       // Step 1: cleanup
       const cleaned = await cleanupTranscript(rawText);
-      writeFileSync(cleanedPath, cleaned);
 
-      // Step 2: verse-restore
-      const { text: restored } = restoreVerses(cleaned);
+      // Step 2: strip fabricated praṇāma
+      const { text: strippedCleaned, stripped: pranamaStripped } =
+        stripFabricatedPranama(rawText, cleaned);
+      if (pranamaStripped > 0) {
+        console.log(`  strip-pranama: removed ${pranamaStripped} fabricated block(s)`);
+      }
+      writeFileSync(cleanedPath, strippedCleaned);
+
+      // Step 3: verse-restore
+      const { text: restored } = restoreVerses(strippedCleaned);
       writeFileSync(restoredPath, restored);
 
       // Verify: count praṇāma occurrences after first 500 chars

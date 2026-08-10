@@ -46,6 +46,9 @@ export function groqKeys(): string[] {
     process.env.GROQ_API_KEY_8,
     process.env.GROQ_API_KEY_9,
     process.env.GROQ_API_KEY_10,
+    process.env.GROQ_API_KEY_11,
+    process.env.GROQ_API_KEY_12,
+    process.env.GROQ_API_KEY_13,
   ].filter((k): k is string => !!k);
 }
 

@@ -335,24 +335,7 @@ export async function transcribeWithGroqChunked(
   }
 
   for (let i = texts.length; i < chunks.length; i++) {
-    let chunkText: string;
-    if (chunks[i].byteLength > GROQ_MAX_BYTES) {
-      // Chunk exceeds Whisper limit (very high bitrate) — sub-split by bytes
-      const subChunks: Buffer[] = [];
-      const subSize = GROQ_MAX_BYTES - 1024 * 1024;
-      for (let j = 0; j < chunks[i].byteLength; j += subSize) {
-        subChunks.push(chunks[i].subarray(j, Math.min(j + subSize, chunks[i].byteLength)));
-      }
-      const subTexts: string[] = [];
-      for (let s = 0; s < subChunks.length; s++) {
-        const r = await transcribeWithGroq(subChunks[s], `chunk_${i}_${s}.mp3`);
-        subTexts.push(r.text);
-      }
-      chunkText = subTexts.join(" ");
-    } else {
-      const r = await transcribeWithGroq(chunks[i], `chunk_${i}.mp3`);
-      chunkText = r.text;
-    }
+    const chunkText = await transcribeBufferResilient(chunks[i], `chunk_${i}`);
     texts.push(chunkText);
     saveCheckpoint(cpPath, texts);
     // Pace requests to avoid rate limits (1s between chunks)
@@ -362,6 +345,46 @@ export async function transcribeWithGroqChunked(
   // Full run completed — checkpoint no longer needed.
   clearCheckpoint(cpPath);
   return { text: texts.join(" "), provider: "groq" };
+}
+
+// Floor below which we stop splitting and give up for real — ~8s of audio
+// at typical lecture bitrates. In practice a chunk this small essentially
+// always succeeds, so this floor exists only to bound recursion, not
+// because we expect to hit it.
+const SPLIT_FLOOR_BYTES = 100 * 1024;
+
+/**
+ * Transcribes one chunk, tolerating both "too big for Whisper" (size-split)
+ * and "this exact chunk hangs/fails no matter how many times we retry it"
+ * (half-split) failure modes. A chunk that reliably times out against Groq
+ * (confirmed via direct testing — same bytes, same result every time) will
+ * never succeed by retrying the identical request; splitting it into
+ * smaller pieces changes what's actually sent and reliably gets past it.
+ * Recurses until every fragment succeeds — no silent gaps in the transcript.
+ */
+async function transcribeBufferResilient(buffer: Buffer, label: string): Promise<string> {
+  if (buffer.byteLength > GROQ_MAX_BYTES) {
+    const mid = Math.floor(buffer.byteLength / 2);
+    const textA = await transcribeBufferResilient(buffer.subarray(0, mid), `${label}a`);
+    const textB = await transcribeBufferResilient(buffer.subarray(mid), `${label}b`);
+    return [textA, textB].join(" ");
+  }
+
+  try {
+    const r = await transcribeWithGroq(buffer, `${label}.mp3`);
+    return r.text;
+  } catch (err) {
+    if (buffer.byteLength <= SPLIT_FLOOR_BYTES) {
+      throw err; // truly last resort — see SPLIT_FLOOR_BYTES comment
+    }
+    console.warn(
+      `[groq] ${label} failed after full retry (${(buffer.byteLength / 1024).toFixed(0)} KB): ${(err as Error).message}. Splitting in half and retrying each piece.`
+    );
+    const mid = Math.floor(buffer.byteLength / 2);
+    const textA = await transcribeBufferResilient(buffer.subarray(0, mid), `${label}a`);
+    const textB = await transcribeBufferResilient(buffer.subarray(mid), `${label}b`);
+    return [textA, textB].join(" ");
+  }
 }
 
 export async function transcribeWithGroq(
@@ -403,7 +426,12 @@ export async function transcribeWithGroq(
       const status = e.status || 0;
       const msg = e.message || "";
 
-      if (status === 429 || /rate_limit|429/i.test(msg)) {
+      const isKeyBlocked =
+        status === 429 ||
+        status === 401 ||
+        status === 403 ||
+        /rate_limit|429|access denied|check your network/i.test(msg);
+      if (isKeyBlocked) {
         if (rotateGroqKey()) {
           await sleep(1500);
           continue;
