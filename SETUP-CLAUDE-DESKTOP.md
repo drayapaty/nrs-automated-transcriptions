@@ -29,15 +29,39 @@
          "env": {
            "GROQ_API_KEY": "gsk_...",
            "ANTHROPIC_API_KEY": "sk-ant-...",
-           "DEEPGRAM_API_KEY": "..."
+           "DEEPGRAM_API_KEY": "...",
+           "OPENSEARCH_URL": "https://148.251.70.122:9200",
+           "OPENSEARCH_USER": "admin",
+           "OPENSEARCH_PASS": "...",
+           "OPENSEARCH_INDEX": "ask-nrs-lectures",
+           "NODE_TLS_REJECT_UNAUTHORIZED": "0"
          }
        }
      }
    }
    ```
-   Note: DEEPGRAM_API_KEY is only needed for the conversation/diarization tool.
+   Notes:
+   - `DEEPGRAM_API_KEY` is only needed for the conversation/diarization tool.
+   - `OPENSEARCH_*` and `NODE_TLS_REJECT_UNAUTHORIZED` are only needed for the
+     `elaborate` tool (Part 2 — parallel examples from books/lectures). Ask
+     Divakar for the real `OPENSEARCH_PASS` value; omit these four lines
+     entirely if you don't plan to use `elaborate` yet.
+   - `NODE_TLS_REJECT_UNAUTHORIZED=0` is required because that OpenSearch
+     host uses a self-signed certificate — this only weakens TLS verification
+     for connections this one process makes, not system-wide.
 
-3. **Restart Claude Desktop** (Cmd+Q, reopen).
+3. **One extra file needed for `compare_lecture` and `elaborate`** (both
+   depend on it): Gopīparāṇadhana Dāsa's published Bṛhad-bhāgavatāmṛta Vol.1
+   translation/commentary must exist locally at:
+   ```
+   ~/Downloads/FFF/SanatanaGoswami-extracted/md/01_Brhad-Bhagavatamrita__Gopiparanadana-Vol1.md
+   ```
+   This is copyrighted text and is deliberately NOT included in this
+   package. Ask Divakar for the file directly. Every other tool
+   (transcribe, translate, summarize, write_chapter, write_chapter_voiced)
+   works without it.
+
+4. **Restart Claude Desktop** (Cmd+Q, reopen).
 
 ## Project Instructions (recommended)
 
@@ -71,6 +95,29 @@ With speaker names:
 ### Translate to Russian
 > Translate this to Russian. Just run the tool: /Users/nbyers/Downloads/lecture_restored.md
 
+Also works on a Word file:
+> Translate this to Russian. Just run the tool: /Users/nbyers/Downloads/lecture_summary.docx
+
+### Summarize a lecture
+> Summarize this lecture. Just run the tool: /Users/nbyers/Downloads/lecture_restored.md
+
+### Compare against Gopīparāṇadhana's commentary
+(needs the Vol.1 source file installed locally — see setup step 3 above)
+> Compare this lecture summary to the commentary. Just run the tool: /Users/nbyers/Downloads/lecture_summary.md
+
+If the verse range isn't in the filename, give it explicitly:
+> Compare this lecture summary to the commentary, BB part 1 chapter 2 verses 14-18: /Users/nbyers/Downloads/lecture_summary.md
+
+### Write chapter material (third person)
+> Write this up as book-chapter material. Just run the tool: /Users/nbyers/Downloads/lecture_summary.md
+
+### Write chapter material (Mahārāja's own voice)
+> Write this in my own voice as book-chapter material. Just run the tool: /Users/nbyers/Downloads/lecture_summary.md
+
+### Elaborate (4-part: excerpt, parallel examples, elaboration angles)
+(needs OpenSearch env vars and the Vol.1 source file — see setup steps 2-3 above; run compare first)
+> Run the elaborate step on this lecture. Restored transcript: /Users/nbyers/Downloads/lecture_restored.md, summary: /Users/nbyers/Downloads/lecture_summary.md
+
 ## Output
 All files are saved to `~/Downloads/`:
 - `*_raw.md` — raw Whisper output
@@ -79,7 +126,11 @@ All files are saved to `~/Downloads/`:
 - `*_diarized_raw.md` — raw diarized conversation
 - `*_diarized_cleaned.md` — IAST-corrected diarized conversation
 - `*_diarized_restored.md` — diarized with verse restoration
-- `*_ru.md` — Russian translation
+- `*_ru.md` / `*_ru.docx` — Russian translation
+- `*_summary.md` — Evernote-style lecture summary
+- `*_comparison.md` — points not covered in Gopīparāṇadhana's commentary
+- `*_chapter.md` / `*_chapter_voiced.md` — book-chapter drafts
+- `*_elaborate.md` (+ `_part-1/2/3.md`, `_abridged_part1.md`, `_elaborate_combined.md`, `_abridged_combined.md`) — elaborate step output
 
 ## Typical timing
 - 30-min lecture: ~2-3 min transcription + ~1 min translation

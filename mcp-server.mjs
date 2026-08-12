@@ -10,7 +10,12 @@
  *   transcribe_file     — same pipeline from a local audio file
  *   transcribe_url      — same pipeline from S3/direct URL
  *   transcribe_conversation — multi-speaker diarized transcription
- *   translate_russian   — translate a transcript file to Russian
+ *   translate_russian   — translate a transcript (.md or .docx) to Russian
+ *   summarize_lecture   — Evernote-style summary from a restored transcript
+ *   compare_lecture      — vs. Gopīparāṇadhana Vol.1 commentary (needs local source file)
+ *   write_chapter_voiced — first-person (Mahārāja's voice) book-chapter draft — the
+ *                          only chapter-writing tool; no third-person variant kept
+ *   elaborate             — 4-part elaboration step (needs OpenSearch access)
  *
  * Install in Claude Desktop:
  *   ~/Library/Application Support/Claude/claude_desktop_config.json:
@@ -40,6 +45,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CLI_SCRIPT = join(__dirname, "scripts", "transcribe-cli.ts");
 const CONVERSATION_SCRIPT = join(__dirname, "scripts", "transcribe-conversation-cli.ts");
 const TRANSLATE_SCRIPT = join(__dirname, "scripts", "translate-cli.ts");
+const SUMMARIZE_SCRIPT = join(__dirname, "scripts", "summarize-cli.ts");
+const COMPARE_SCRIPT = join(__dirname, "scripts", "compare-cli.ts");
+const WRITE_CHAPTER_VOICED_SCRIPT = join(__dirname, "scripts", "write-chapter-voiced-cli.ts");
+const ELABORATE_SCRIPT = join(__dirname, "scripts", "elaborate-cli.ts");
+
+function runScript(script, args, timeoutMs = 900_000) {
+  const quotedArgs = args.filter(Boolean).map((a) => `"${a}"`).join(" ");
+  return execSync(`npx tsx "${script}" ${quotedArgs}`, {
+    encoding: "utf-8",
+    cwd: __dirname,
+    timeout: timeoutMs,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+}
 
 function runCli(input) {
   const output = execSync(`npx tsx "${CLI_SCRIPT}" "${input}"`, {
@@ -101,16 +120,77 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "translate_russian",
       description:
-        "Translate an English transcript file to Russian. Uses Claude with Gaudiya Vaishnava conventions. Outputs a _ru.md file next to the input. Takes 1-3 minutes per transcript.",
+        "Translate an English transcript or lecture summary to Russian. Uses Claude with Gaudiya Vaishnava conventions. Accepts .md or .docx input. .md input outputs a _ru.md file; .docx input outputs both _ru.md and _ru.docx (headings/bullets/bold rebuilt to match the original formatting). Takes 1-3 minutes per file.",
       inputSchema: {
         type: "object",
         properties: {
           path: {
             type: "string",
-            description: "Absolute path to the English transcript .md file (typically the _restored.md or _cleaned.md output from transcription)",
+            description: "Absolute path to the English .md or .docx file (typically the _restored.md, _cleaned.md, or _summary.md/.docx output from an earlier step)",
           },
         },
         required: ["path"],
+      },
+    },
+    {
+      name: "summarize_lecture",
+      description:
+        "Generate an Evernote-style summary of a Bṛhad-bhāgavatāmṛta lecture from its restored transcript. Pure numbered-flow structure (## 1) Title, ### A. sub-point), no fixed section labels. Outputs a _summary.md file next to the input. Takes ~1 minute.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Absolute path to the restored/cleaned transcript .md file",
+          },
+        },
+        required: ["path"],
+      },
+    },
+    {
+      name: "compare_lecture",
+      description:
+        "Comparative analysis: finds points in the lecture NOT covered in Gopīparāṇadhana Dāsa's published Bṛhad-bhāgavatāmṛta Vol.1 commentary. Requires the Vol.1 source file to exist locally at ~/Downloads/FFF/SanatanaGoswami-extracted/md/01_Brhad-Bhagavatamrita__Gopiparanadana-Vol1.md (not included in this install — ask Divakar for it if missing). Only works for lectures with a sequential BB verse range (not topical talks) unless the range is passed explicitly. Outputs a _comparison.md file. Takes ~1 minute.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Absolute path to the lecture _summary.md file",
+          },
+          part: { type: "number", description: "BB part number — only needed if not parseable from the filename" },
+          chapter: { type: "number", description: "BB chapter number — only needed if not parseable from the filename" },
+          verseStart: { type: "number", description: "Starting verse number — only needed if not parseable from the filename" },
+          verseEnd: { type: "number", description: "Ending verse number — only needed if not parseable from the filename" },
+        },
+        required: ["path"],
+      },
+    },
+    {
+      name: "write_chapter_voiced",
+      description:
+        "Write first-person book-chapter prose in Mahārāja's own voice (he is the book's author), calibrated against his Collected Letters tone profile. The only chapter-writing tool — no third-person variant. Unverified against real book manuscript pages — treat as a rough draft. Outputs a _chapter_voiced.md file. Takes ~1 minute.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          summaryPath: { type: "string", description: "Absolute path to the lecture _summary.md file" },
+          comparisonPath: { type: "string", description: "Absolute path to the _comparison.md file, if one exists (optional — for topical talks with no BB verse anchor, compare_lecture never runs, and this writes straight from the summary). If omitted, derived from summaryPath." },
+        },
+        required: ["summaryPath"],
+      },
+    },
+    {
+      name: "elaborate",
+      description:
+        "Mahārāja's 4-point elaboration step: Part 1 an edited transcript excerpt (his real words, not a summary), Part 2 parallel examples from his own published books/lectures (requires OpenSearch access — OPENSEARCH_URL/USER/PASS env vars, not included in this install), Part 3 suggested elaboration angles. Also writes an abridged Part 1 and two combined files. Requires compare_lecture to have been run first (needs the _comparison.md file). Takes 2-4 minutes.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          restoredPath: { type: "string", description: "Absolute path to the restored transcript .md file" },
+          summaryPath: { type: "string", description: "Absolute path to the lecture _summary.md file" },
+          comparisonPath: { type: "string", description: "Absolute path to the _comparison.md file. If omitted, derived from summaryPath." },
+        },
+        required: ["restoredPath", "summaryPath"],
       },
     },
     {
@@ -180,12 +260,49 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (!filePath) {
         return { content: [{ type: "text", text: "Missing file path" }] };
       }
-      const output = execSync(`npx tsx "${TRANSLATE_SCRIPT}" "${filePath}" ru`, {
-        encoding: "utf-8",
-        cwd: __dirname,
-        timeout: 900_000,
-        maxBuffer: 10 * 1024 * 1024,
-      });
+      const output = runScript(TRANSLATE_SCRIPT, [filePath, "ru"]);
+      return { content: [{ type: "text", text: output }] };
+    }
+
+    if (name === "summarize_lecture") {
+      if (!args.path) {
+        return { content: [{ type: "text", text: "Missing file path" }] };
+      }
+      const output = runScript(SUMMARIZE_SCRIPT, [args.path]);
+      return { content: [{ type: "text", text: output }] };
+    }
+
+    if (name === "compare_lecture") {
+      if (!args.path) {
+        return { content: [{ type: "text", text: "Missing file path" }] };
+      }
+      const output = runScript(COMPARE_SCRIPT, [
+        args.path,
+        args.part,
+        args.chapter,
+        args.verseStart,
+        args.verseEnd,
+      ]);
+      return { content: [{ type: "text", text: output }] };
+    }
+
+    if (name === "write_chapter_voiced") {
+      if (!args.summaryPath) {
+        return { content: [{ type: "text", text: "Missing summaryPath" }] };
+      }
+      const output = runScript(WRITE_CHAPTER_VOICED_SCRIPT, [args.summaryPath, args.comparisonPath]);
+      return { content: [{ type: "text", text: output }] };
+    }
+
+    if (name === "elaborate") {
+      if (!args.restoredPath || !args.summaryPath) {
+        return { content: [{ type: "text", text: "Missing restoredPath or summaryPath" }] };
+      }
+      const output = runScript(
+        ELABORATE_SCRIPT,
+        [args.restoredPath, args.summaryPath, args.comparisonPath],
+        1_800_000
+      );
       return { content: [{ type: "text", text: output }] };
     }
 

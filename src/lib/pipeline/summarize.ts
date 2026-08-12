@@ -63,6 +63,115 @@ function enforceSectionHeadings(text: string): string {
     .replace(/^(?!#)([A-Z]\.)\s+(\S.*)$/gm, "### $1 $2");
 }
 
+// Banned generic section labels — same list the prompt already spells out
+// ("no fixed section labels — no 'Context & aim,' no 'Recap of the
+// previous class,' ..."). Prompt-only compliance isn't reliable (confirmed
+// 2026-08-12: a real generated summary titled a section literally "## 2)
+// Recap of the previous class (texts 37–49)"), same failure class as the
+// bullet/heading rules above.
+//
+// Detection is deliberately conservative: only flags a title that EXACTLY
+// matches a banned phrase, or STARTS with one followed by a clear
+// separator (":" / "-" / "(") introducing lecture-specific detail. Does
+// NOT flag a banned word used as part of an unrelated, genuinely
+// content-specific title ("Highlights of Kṛṣṇa's transcendental
+// qualities", "Reading and discussion of BB 1.2.14") — a loose
+// prefix-strip would mangle those.
+const BANNED_LABELS = [
+  "context & aim",
+  "context and aim",
+  "recap of the previous class",
+  "recap of the previous session",
+  "recap of previous class",
+  "recap of previous session",
+  "reading",
+  "highlights from the commentary",
+  "illustrations used",
+  "theme",
+];
+
+const HAIKU_MODEL = "claude-haiku-4-5-20251001";
+
+interface HeadingViolation {
+  lineIndex: number;
+  prefix: string; // "## 2)" or "### A."
+  level: "section" | "subsection";
+}
+
+function findBannedHeadings(lines: string[]): HeadingViolation[] {
+  const violations: HeadingViolation[] = [];
+  lines.forEach((line, i) => {
+    const m = /^(## \d+\)|### [A-Z]\.)\s+(.*)$/.exec(line);
+    if (!m) return;
+    const [, prefix, title] = m;
+    const lower = title.toLowerCase();
+    const isViolation = BANNED_LABELS.some((label) => {
+      if (lower === label) return true;
+      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`^${escaped}\\s*[:\\-–—(]`, "i").test(title);
+    });
+    if (isViolation) {
+      violations.push({ lineIndex: i, prefix, level: prefix.startsWith("##") ? "section" : "subsection" });
+    }
+  });
+  return violations;
+}
+
+/** Body text from just after a heading line up to the next heading of equal-or-higher level. */
+function sectionBody(lines: string[], v: HeadingViolation): string {
+  const endPatterns = v.level === "section" ? [/^## /] : [/^## /, /^### /];
+  let end = lines.length;
+  for (let i = v.lineIndex + 1; i < lines.length; i++) {
+    if (endPatterns.some((p) => p.test(lines[i]))) {
+      end = i;
+      break;
+    }
+  }
+  return lines.slice(v.lineIndex + 1, end).join("\n").trim();
+}
+
+/**
+ * A regex strip can only delete the banned phrase, not rephrase what's
+ * left — "Recap of the previous class (texts 37–49)" stripped down to
+ * "(texts 37–49)" is grammatically awkward even though it's no longer
+ * using a banned word. Instead: send the section's actual body content to
+ * Haiku (cheap, same low-stakes-call pattern as elaborate.ts's
+ * findTopics()) and ask for a real content-specific title, same as the
+ * model was supposed to write in the first place.
+ */
+async function retitleBannedSection(body: string): Promise<string | null> {
+  if (body.length < 10) return null;
+  try {
+    const response = await anthropic().messages.create({
+      model: HAIKU_MODEL,
+      max_tokens: 60,
+      system:
+        "Given the body content of one section of a lecture summary, write ONE short, plain, content-specific title (roughly 4-12 words) describing what this section actually covers. Do NOT use generic template words like Recap, Reading, Theme, Highlights, Context, Illustrations. Return ONLY the title text — no quotes, no numbering, no markdown.",
+      messages: [{ role: "user", content: body }],
+    });
+    const block = response.content.find((b) => b.type === "text");
+    const title = (block as { text?: string } | undefined)?.text?.trim();
+    return title || null;
+  } catch {
+    return null;
+  }
+}
+
+async function fixBannedSectionLabels(text: string): Promise<string> {
+  const lines = text.split("\n");
+  const violations = findBannedHeadings(lines);
+  if (violations.length === 0) return text;
+
+  for (const v of violations) {
+    const body = sectionBody(lines, v);
+    const newTitle = await retitleBannedSection(body);
+    if (newTitle) {
+      lines[v.lineIndex] = `${v.prefix} ${newTitle}`;
+    }
+  }
+  return lines.join("\n");
+}
+
 export async function generateSummary(cleanedTranscript: string): Promise<string> {
   const response = await anthropic().messages.create({
     model: CLAUDE_MODEL,
@@ -78,5 +187,6 @@ export async function generateSummary(cleanedTranscript: string): Promise<string
   const block = response.content.find((b) => b.type === "text");
   const text = (block as { text?: string } | undefined)?.text;
   if (!text) throw new Error("Summary generation returned no text");
-  return enforceHollowNestedBullets(enforceSectionHeadings(text));
+  const formatted = enforceHollowNestedBullets(enforceSectionHeadings(text));
+  return fixBannedSectionLabels(formatted);
 }

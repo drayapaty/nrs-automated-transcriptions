@@ -27,6 +27,7 @@ import {
   cleanupConversation,
 } from "../src/lib/pipeline/diarize";
 import { restoreVerses } from "../src/lib/pipeline/verse-restore.mjs";
+import { stripFabricatedPranama } from "../src/lib/pipeline/strip-fabricated-pranama";
 
 function parseSpeakers(arg?: string): Record<number, string> | undefined {
   if (!arg) return undefined;
@@ -88,7 +89,11 @@ async function main() {
 
   // Stage 3: Sonnet cleanup
   console.log("\n=== Stage 3: Cleanup (Sonnet IAST) ===");
-  const cleaned = await cleanupConversation(rawTranscript, speakerNames);
+  const cleanedRaw = await cleanupConversation(rawTranscript, speakerNames);
+  const { text: cleaned, stripped: pranamaStripped } = stripFabricatedPranama(rawTranscript, cleanedRaw);
+  if (pranamaStripped > 0) {
+    console.log(`  strip-pranama: removed ${pranamaStripped} fabricated guru-praṇāma block(s) (not present in raw)`);
+  }
   const cleanedPath = join(downloadsDir, `${slug}_diarized_cleaned.md`);
   writeFileSync(cleanedPath, cleaned);
   console.log(`Cleaned: ${cleaned.length} chars → ${cleanedPath}`);

@@ -4,6 +4,231 @@
 
 ---
 
+## 2026-08-12 — write-chapter (plain third-person) removed entirely; write-chapter-voiced is the only chapter-writing tool
+
+**Decision**: Divakar's explicit standing call — "voiced first-person always. dont even keep third person option." Supersedes the 2026-08-06 decision (further up this file) to keep `write-chapter.ts` "for reference/comparison" alongside the new voiced variant. That reference copy is now gone, not just deprioritized.
+
+**Also fixed same day**: `write-chapter`/`write-chapter-voiced` used to hard-require a `_comparison.md` file (both the plain and voiced CLIs would error out if missing). Changed to optional — for the 4 topical/thematic lectures with no BB verse anchor (`compare` structurally can't run on those — nothing to match against Gopīparāṇadhana's verse-by-verse commentary), the chapter is now written straight from the summary alone, with the prompt's "distinctive points vs. published commentary" framing dropped when there's no comparison to draw from. Confirmed working end-to-end on all 4 (`2025_10_30_bb_is_sb`, `2025_12_21_bb_book_dist`, `2026_03_29_bb_budapest`, `2026_04_01_radha_kunda_prakat_en_hu`) before this removal decision landed.
+
+**Removed**:
+- `src/lib/pipeline/write-chapter.ts`
+- `scripts/write-chapter-cli.ts`
+- `.claude/commands/nrs-write-chapter.md`
+- `~/.claude/skills/nrs-write-chapter/` (whole skill dir)
+- The `write_chapter` MCP tool in `mcp-server.mjs` (real functional break caught during this cleanup — it still pointed at the just-deleted CLI script; Mahārāja's Desktop setup would have hit a missing-file error on next use if this had been missed)
+
+**Updated in place** (no longer describe write-chapter as "kept for reference"): `write-chapter-voiced.ts` header comment, `elaborate.ts` header comment, `nrs-write-chapter-voiced.md` command, `nrs-write-chapter-voiced` skill.
+
+**How to apply**: any future chapter-drafting request defaults to voiced first-person — there is no plain third-person fallback to offer anymore. If a genuine need for third-person prose resurfaces later, it would need to be rebuilt from scratch (git history has the old implementation if wanted as a starting point), not restored as a parallel option by default.
+
+---
+
+## 2026-08-12 — Banned section-label enforcement: code-level, and via a Haiku retitle call, not just prompt text
+
+**Bug found via a full 35-lecture audit**: `SUMMARY_SYSTEM_PROMPT` has always
+explicitly banned generic section labels ("no fixed section labels — no
+'Context & aim,' no 'Recap of the previous class,' ..."), but this was
+prompt-only — no code-level enforcement existed, unlike the bullet-format
+and heading-prefix rules which got the same treatment back in the
+2026-08-07 session after real failures. Found 3/35 real summaries
+(`2025_10_03_bb_qualifying`, `2026_04_26_bb_1_2_50_52`,
+`2026_07_19_bb_1_2_81_88`) using "Recap" despite the explicit ban —
+`2026_04_26_bb_1_2_50_52` had it as an actual section heading (`## 2)
+Recap of the previous class (texts 37–49)`), the clearest violation.
+
+**Fix, two layers, in `src/lib/pipeline/summarize.ts`**:
+1. `findBannedHeadings()` — deterministic detection. Conservative on
+   purpose: only flags a heading title that exactly matches a banned
+   phrase, or starts with one followed by a clear separator (`:`/`-`/`(`)
+   introducing lecture-specific detail. Does NOT flag a banned word inside
+   an unrelated, genuinely content-specific title ("Highlights of Kṛṣṇa's
+   transcendental qualities") — a loose prefix-strip would mangle those.
+2. `fixBannedSectionLabels()` — for each violation, extracts that
+   section's actual body text and sends it to Haiku (same low-stakes-call
+   pattern as `elaborate.ts`'s `findTopics()`) asking for a real,
+   content-specific title. **Not** a mechanical text-strip: an earlier
+   draft of this fix just deleted the banned phrase and kept whatever text
+   was left, which for the real case above produced `## 2) (texts 37–49)`
+   — grammatically broken (bare parenthetical, no rephrasing possible from
+   pattern-matching alone). Divakar's call, in his own words: "can you not
+   send sonnet that entire topic 2 to get a title" — i.e. give the model
+   the actual section content and let it write a real title, same as it
+   should have done the first time.
+3. `generateSummary()` now runs `fixBannedSectionLabels()` (async, may
+   make 0-N extra Haiku calls depending on violations found — 0 extra cost
+   on the common case where the model already followed the rule) as the
+   final step, after the existing bullet/heading enforcement.
+
+Retroactively fixed on the one real live case
+(`2026_04_26_bb_1_2_50_52`'s section 2) by running the new logic directly
+against the existing file rather than a full re-generation — same output
+the code would now produce automatically.
+
+**How to apply**: any future "the model didn't follow an explicit prompt
+rule" bug in this pipeline should default to this same two-layer pattern —
+deterministic detection + a cheap follow-up model call for anything that
+needs actual rephrasing/judgment, not a blind text-strip. Purely mechanical
+fixes (bullet markers, heading prefixes) are fine as regex; anything that
+requires understanding what the text *means* isn't.
+
+---
+
+## 2026-08-10 — MCP server extended with 5 new tools; Mahārāja's machine is Claude Desktop, not Claude Code
+
+**Confirmed**: Mahārāja's Mac Mini runs Claude Desktop only (MCP server + copy-paste
+prompts per `SETUP-CLAUDE-DESKTOP.md`), not Claude Code CLI. This means the
+`.claude/commands/*.md` slash commands and `~/.claude/skills/*` built earlier
+this session do NOT reach him — those are Claude Code-only concepts. The only
+integration surface that matters for his machine is `mcp-server.mjs`.
+
+**Fixed the real gap**: `mcp-server.mjs` only exposed 5 tools (transcribe x3,
+transcribe_conversation, translate_russian) — none of this session's BB
+book-workflow additions (summarize, compare, write-chapter x2, elaborate)
+were reachable from Desktop at all. Added 5 new MCP tools wired to the
+existing CLI scripts, following the exact `runScript()` pattern already used
+by `translate_russian`: `summarize_lecture`, `compare_lecture`,
+`write_chapter`, `write_chapter_voiced`, `elaborate`. `translate_russian`'s
+description updated to mention .docx support — no code change needed there,
+`translate-cli.ts` already detects the extension itself.
+
+**Two external dependencies documented, not bundled**:
+- `compare_lecture` and `elaborate` need Gopīparāṇadhana Dāsa's Vol.1
+  commentary file locally at
+  `~/Downloads/FFF/SanatanaGoswami-extracted/md/01_Brhad-Bhagavatamrita__Gopiparanadana-Vol1.md`
+  — copyrighted BBT text, deliberately never committed or bundled in the
+  deploy zip. Divakar has to hand it over directly if Mahārāja wants those
+  two tools.
+- `elaborate`'s Part 2 (parallel examples) needs `OPENSEARCH_URL`/`_USER`/
+  `_PASS`/`_INDEX` + `NODE_TLS_REJECT_UNAUTHORIZED=0` env vars in his Desktop
+  MCP config — added as an optional block in `SETUP-CLAUDE-DESKTOP.md`, not
+  required for every other tool.
+
+**corpus.json / corpus-seeds.json** (verse-restore data) are git-tracked
+already — no separate transfer needed, a fresh tarball/clone brings them
+automatically. Confirmed this is NOT a real gap despite Divakar's recollection
+of "sending the verses along with it" as a separate step last time.
+
+**Deploy package rebuilt**: `nrs-transcribe-package.tar.gz`, repo minus
+`node_modules`/`.next`/`.git`/`.vercel`/`.env*`/the stray 7MB
+`corpus-pre-liturgy-*.json` backup/and a stray `.claude/worktrees/` leftover
+git worktree (10MB dev cruft, caught and excluded before sending). No
+secrets embedded — `SETUP-CLAUDE-DESKTOP.md`'s MCP config block uses
+placeholder values, same convention as the original doc.
+
+**How to apply**: any future Desktop-facing capability must be added as an
+MCP tool in `mcp-server.mjs`, not as a Claude Code command/skill — those
+never reach Mahārāja's actual setup. Keep `SETUP-CLAUDE-DESKTOP.md` and
+`mcp-server.mjs`'s tool list in sync going forward.
+
+---
+
+## 2026-08-10 — LECTURES-2000 batch job: parallelized 4-wide via xargs -P
+
+Switched from the serial while-loop (`tqk-batch-transcribe.sh` pattern) to
+4-concurrent workers, per user request ("go 4 at a time") once the 13-key
+Groq rotation made serial-one-at-a-time clearly wasteful. System bash is
+3.2 (macOS default, no `wait -n`) and no GNU parallel is installed, so used
+`xargs -P 4` with a per-lecture worker script instead of a semaphore loop.
+
+**Split into two scripts**: `lectures2000-batch-transcribe.sh` (builds/filters
+the queue, dispatches) + `lectures2000-worker.sh` (downloads + transcribes +
+files ONE lecture, safe to run concurrently since each only ever touches its
+own slug dir — no shared mutable state besides appending to the same log).
+
+**NUL-delimited queue, not newline/tab**: titles contain quotes, apostrophes,
+commas — BSD/macOS `xargs` (no `-d` flag, unlike GNU) will misparse those in
+default or `-I` whitespace-delimited mode. Verified empirically that `-0 -n1`
+passes each record through as one opaque argument, quotes and all; `-I`
+without `-0` does not reliably. Queue-building script still uses the same
+python slug logic (verbatim) as the serial version, just NUL-terminated
+(`\0`) instead of newline-terminated.
+
+**Real bug caught during the switchover**: launched the parallel script
+without first stopping the still-running serial background job — both were
+processing the exact same lecture (`2001-08-26_simferopol_notag`)
+simultaneously before the collision was noticed and the serial job killed.
+No corruption (worst case is wasted duplicate Groq/Sonnet calls, since each
+side's `mkdir -p`+`mv` just clobbers harmlessly), but confirms: **always
+check for + stop a still-running batch job before launching a
+differently-shaped one against the same output dir**, don't assume a
+previous background task finished just because attention moved on.
+
+Validated with a 10-lecture test batch at concurrency 4 before trusting it
+at scale — 10/10 done, 0 failures, log stayed legible (each worker prefixes
+its own lines with `[slug]`).
+
+## 2026-08-11 — LECTURES-2000: "could not process file" root cause is raw byte-slice chunking, not a filename/download issue
+
+7 lectures repeatedly failed Groq Whisper with `400 could not process file
+- is it a valid media file?`, always pinned to one specific chunk even
+after the chunk-splitting fallback recursed down to 117KB — user asked if
+it was a filename encoding problem (reasonable, given the earlier `#`/space
+URL bugs that day). Verified it's not: downloaded the full file for one
+case directly (168MB, `file` confirms valid `MPEG ADTS, layer III` with
+proper ID3v2.4 header) — the download and the source file are both fine.
+
+**Actual cause**: `transcribeWithGroq`'s chunking (`transcribe.ts:308-317`)
+does raw `audio.subarray(i, end)` byte-slicing on the full buffer, no
+re-encoding and no MPEG-frame-boundary awareness. MP3 frames are usually
+self-syncing enough that arbitrary byte offsets still decode fine (proven
+by 800+ successful lectures), but for a small minority the slice boundary
+lands somewhere Groq's decoder can't recover sync from at all, and no
+amount of further halving fixes it since the corruption is structural to
+that byte range, not a size problem.
+
+**Not fixed** (would need `ffmpeg`-based re-chunking — proper re-encode per
+segment instead of raw buffer slicing — a real pipeline change, not
+attempted here to avoid destabilizing the two batch jobs mid-run). The 7
+affected lectures stay on `LECTURES-2000/known-failures.txt` with this
+noted as the real cause; worth revisiting if those specific lectures are
+wanted, as a `transcribe.ts` chunking fix rather than a per-lecture retry.
+
+## 2026-08-11 — LECTURES-2000: fixed shared-scratch-file race, per-invocation unique filenames
+
+A 100-item main-pool batch silently dispatched only 8 workers before
+printing "BATCH COMPLETE" — no crash, no error, just quietly stopped. Root
+cause: both `lectures2000-batch-transcribe.sh` and
+`lectures2000-batch-paid-key.sh` wrote their queue/todo files to fixed
+shared paths (`$AUDIO_TMP/queue.nul`, `todo.nul`, `todo-paid.nul`). Any two
+overlapping invocations — same script relaunched before the prior one's
+`xargs` finished draining its todo file, or main and paid racing on the
+identically-named `queue.nul` during queue-build — clobber each other's
+file mid-read, truncating the NUL-delimited stream and silently starving
+`xargs` after a handful of records.
+
+**Fix**: both scripts now use `$$`(PID)-suffixed filenames
+(`queue-main-$$.nul`/`todo-main-$$.nul`, `queue-paid-$$.nul`/`todo-paid-$$.nul`),
+cleaned up via `trap cleanup EXIT`. The in-flight exclusion check (so main
+and paid don't double-process the same lecture) now globs `todo-main-*.nul`
++ `todo-paid-*.nul` instead of reading one fixed filename, so it still
+correctly sees every concurrently-running invocation of either script.
+
+**Why this matters going forward**: always verify a "batch complete" result
+against actual dispatched-vs-done counts (compare the todo list to real
+folder existence) rather than trusting the completion message alone — a
+silent early exit looks identical to a normal successful run in the log's
+closing lines.
+
+## 2026-08-10 — LECTURES-2000: known-failures exclude list, stop auto-retrying persistent blocks
+
+`2005-06-12_kiev_notag` (uuid `20b454ba-58c9-4257-bec7-979abc6959f9`) failed
+Sonnet cleanup with `400 Output blocked by content filtering policy`
+identically on 2 separate attempts. User: "dont retry, move on, make a
+note" — the TQK job's precedent (retry once, it clears) doesn't hold for
+every content-filter block; some are persistent, not transient.
+
+**Mechanism added**: `LECTURES-2000/known-failures.txt` (UUID per line,
+machine-readable) + `LECTURES-2000/KNOWN_FAILURES.md` (human-readable why).
+Both `lectures2000-batch-transcribe.sh` and `lectures2000-batch-paid-key.sh`
+now exclude these UUIDs at queue-build time, same place the TQK-overlap
+exclusion already lives — so a persistently-failing lecture stops being
+re-attempted (and re-burning Groq/Sonnet cost) every batch run indefinitely.
+
+**How to apply**: a lecture that fails the SAME way twice goes on this list
+instead of getting a third automatic attempt — add its uuid, log the reason
+in KNOWN_FAILURES.md, move on. A single one-off failure (network blip,
+first content-filter hit) still just gets retried normally, same as TQK.
+
 ## 2026-08-09 — LECTURES-2000 batch job: autonomous continuation, no per-batch confirmation
 
 User: "don't have to ask, continue until you finish or the keys hit their

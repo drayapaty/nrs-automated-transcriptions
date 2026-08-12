@@ -1,0 +1,303 @@
+[
+  {
+    "slug": "2023_03_10_bb_taiwan_p2",
+    "matches": [
+      {
+        "ref": "1.1.1",
+        "score": 0.9827586206896551,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_09_14_bb_caitanya",
+    "matches": [
+      {
+        "ref": "1.1.1",
+        "score": 0.9137931034482759,
+        "via": "translation"
+      },
+      {
+        "ref": "3.5.234",
+        "score": 0.7241379310344828,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_09_21_bb_two_types_dainya",
+    "matches": [
+      {
+        "ref": "3.5.223",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "3.5.224",
+        "score": 0.9629629629629629,
+        "via": "translation"
+      },
+      {
+        "ref": "3.5.222",
+        "score": 0.8,
+        "via": "translation"
+      },
+      {
+        "ref": "2.1.191",
+        "score": 0.28125,
+        "via": "translation"
+      },
+      {
+        "ref": "3.7.1",
+        "score": 0.15384615384615385,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_09_28_bb_dainya",
+    "matches": [
+      {
+        "ref": "1.1.42",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.44",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.41",
+        "score": 0.8148148148148148,
+        "via": "translation"
+      },
+      {
+        "ref": "3.5.234",
+        "score": 0.5517241379310345,
+        "via": "translation"
+      },
+      {
+        "ref": "2.1.191",
+        "score": 0.3125,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_10_03_bb_qualifying",
+    "matches": [
+      {
+        "ref": "1.1.46",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.45",
+        "score": 0.8888888888888888,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.47",
+        "score": 0.7777777777777778,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.44",
+        "score": 0.7333333333333333,
+        "via": "translation"
+      },
+      {
+        "ref": "2.1.34",
+        "score": 0.15384615384615385,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_10_05_bb_two_useless",
+    "matches": [
+      {
+        "ref": "1.1.52",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.54",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.53",
+        "score": 0.8214285714285714,
+        "via": "translation"
+      },
+      {
+        "ref": "1.5.113",
+        "score": 0.6031746031746031,
+        "via": "commentary"
+      },
+      {
+        "ref": "1.1.64-65",
+        "score": 0.16981132075471697,
+        "via": "commentary"
+      }
+    ]
+  },
+  {
+    "slug": "2025_10_19_bb_human_birth",
+    "matches": [
+      {
+        "ref": "2.2.230",
+        "score": 0.7222222222222222,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_10_30_bb_is_sb",
+    "matches": []
+  },
+  {
+    "slug": "2025_12_21_bb_book_dist",
+    "matches": []
+  },
+  {
+    "slug": "2026_03_29_bb_budapest",
+    "matches": []
+  },
+  {
+    "slug": "2026_04_01_radha_kunda_prakat_en_hu",
+    "matches": []
+  },
+  {
+    "slug": "2026_04_05_bb_budapest",
+    "matches": [
+      {
+        "ref": "2.1.20",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "2.1.21",
+        "score": 0.9545454545454546,
+        "via": "translation"
+      },
+      {
+        "ref": "2.1.22",
+        "score": 0.9117647058823529,
+        "via": "translation"
+      },
+      {
+        "ref": "2.1.23",
+        "score": 0.9,
+        "via": "translation"
+      },
+      {
+        "ref": "3.7.5-7",
+        "score": 0.5714285714285714,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_09_11_bb_1_1_24_42",
+    "matches": [
+      {
+        "ref": "1.1.42",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.24-25",
+        "score": 0.9491525423728814,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.41",
+        "score": 0.6296296296296297,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_11_02_bb_1_2_14_18",
+    "matches": [
+      {
+        "ref": "1.2.18",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.14",
+        "score": 0.7916666666666666,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.16",
+        "score": 0.5172413793103449,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.17",
+        "score": 0.34782608695652173,
+        "via": "translation"
+      },
+      {
+        "ref": "1.1.69",
+        "score": 0.2692307692307692,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2025_11_09_bb_1_2_19_30",
+    "matches": [
+      {
+        "ref": "1.2.21",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.22",
+        "score": 1,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.30",
+        "score": 0.90625,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.28",
+        "score": 0.8846153846153846,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.19",
+        "score": 0.8076923076923077,
+        "via": "translation"
+      }
+    ]
+  },
+  {
+    "slug": "2026_02_08_bb_1_2_35_42",
+    "matches": [
+      {
+        "ref": "1.2.35",
+        "score": 0.8214285714285714,
+        "via": "translation"
+      },
+      {
+        "ref": "1.2.36",
+        "score": 0.75,
+        "via": "translation"
+      },
+      {
+        "ref": "2.4.163",
+        "score": 0.16666666666666666,
+        "via": "translation"
+      }
+    ]
+  }
+]

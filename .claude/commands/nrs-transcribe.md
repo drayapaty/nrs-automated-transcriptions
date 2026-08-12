@@ -1,6 +1,6 @@
 # Transcribe a lecture
 
-Transcribe an audio file or YouTube URL through the NRS pipeline: Groq Whisper → Claude Sonnet IAST cleanup → deterministic verse-restore.
+Transcribe an audio file or YouTube URL through the NRS pipeline: Groq Whisper → Claude Sonnet IAST cleanup → fabricated-praṇāma strip → deterministic verse-restore.
 
 ## Input
 
@@ -25,6 +25,7 @@ If no input provided, ask for it.
 3. Report results:
    - Output file paths (raw, cleaned, restored — all in ~/Downloads/)
    - Timing per stage
+   - If any fabricated guru-praṇāma blocks were stripped (Sonnet occasionally reconstitutes a full praṇāma from garbled Sanskrit that wasn't actually said — a deterministic post-cleanup pass compares against the raw transcript and removes it if so; the console logs "strip-pranama: removed N fabricated guru-praṇāma block(s)" when it fires)
    - Verse-restore stats (restored count, canonical count)
    - IAST character count
 

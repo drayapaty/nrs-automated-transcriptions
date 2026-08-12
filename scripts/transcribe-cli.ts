@@ -25,6 +25,7 @@ dotenv.config({ path: join(__dirname, "..", ".env.local") });
 
 import { transcribeWithGroqChunked } from "../src/lib/pipeline/transcribe";
 import { cleanupTranscript } from "../src/lib/pipeline/cleanup";
+import { stripFabricatedPranama } from "../src/lib/pipeline/strip-fabricated-pranama";
 import { restoreVerses } from "../src/lib/pipeline/verse-restore.mjs";
 
 async function main() {
@@ -85,7 +86,11 @@ async function main() {
   // Stage 2: Cleanup
   console.log(`\n=== Stage 2: Cleanup (Sonnet IAST) ===`);
   const t2 = Date.now();
-  const cleaned = await cleanupTranscript(rawText);
+  const cleanedRaw = await cleanupTranscript(rawText);
+  const { text: cleaned, stripped: pranamaStripped } = stripFabricatedPranama(rawText, cleanedRaw);
+  if (pranamaStripped > 0) {
+    console.log(`  strip-pranama: removed ${pranamaStripped} fabricated guru-praṇāma block(s) (not present in raw)`);
+  }
   console.log(`Cleaned: ${cleaned.length} chars (${((Date.now() - t2) / 1000).toFixed(1)}s)`);
   const cleanedPath = join(downloadsDir, `${slug}_cleaned.md`);
   writeFileSync(cleanedPath, cleaned);

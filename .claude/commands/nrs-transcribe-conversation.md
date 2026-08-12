@@ -1,6 +1,6 @@
 # Transcribe a multi-speaker conversation
 
-Transcribe a conversation with speaker diarization: Groq Whisper (text quality) + Deepgram (speaker detection) → Claude Sonnet IAST cleanup → verse-restore.
+Transcribe a conversation with speaker diarization: Groq Whisper (text quality) + Deepgram (speaker detection) → Claude Sonnet IAST cleanup → fabricated-praṇāma strip → verse-restore.
 
 ## Input
 
@@ -21,7 +21,7 @@ If no input provided, ask for it.
    ```
    Omit `--speakers` if not provided. Use a 30-minute timeout.
 
-3. Report output file paths and timing. Do NOT summarize the conversation content.
+3. Report output file paths and timing, and whether any fabricated guru-praṇāma blocks were stripped (deterministic post-cleanup pass, same as the single-speaker pipeline). Do NOT summarize the conversation content.
 
 ## Notes
 

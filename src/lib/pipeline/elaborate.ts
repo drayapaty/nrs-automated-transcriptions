@@ -1,7 +1,8 @@
 /**
  * "Elaborate" step — Mahārāja's 4-point write spec (see
- * scripts/ELABORATE_REQUIREMENTS.md). New tool, alongside write-chapter.ts /
- * write-chapter-voiced.ts — does not replace either.
+ * scripts/ELABORATE_REQUIREMENTS.md). New tool, alongside
+ * write-chapter-voiced.ts (the only chapter-writing variant as of
+ * 2026-08-12) — does not replace it.
  *
  * Mahārāja's 4 points, verbatim:
  *   1. PROVIDE THE SPEAKER'S ELABORATION CONTEXTUALLY FROM HIS PRESENTATION
@@ -14,13 +15,20 @@
  *      THESE SUGGESTIONS AT THE BOTTOM OF THE OUTPUT, IF MORE THAN ONE
  *      TOPICS ARE EXTRACTED PLEASE PROVIDE AN EXAMPLE OF EACH
  *
- * Point 3's corpus is BOOKS ONLY (his other transcribed lectures explicitly
- * excluded — confirmed 2026-08-06).
+ * Point 3's corpus, as of 2026-08-11: all books, plus lectures from 2000
+ * onward, plus the full "Teachings of Queen Kunti" series regardless of
+ * year, plus any lecture tagged pipeline_version: "v2" (the TQK +
+ * LECTURES-2000 batch, 892 lectures indexed 2026-08-11 — see
+ * ask-niranjana-swami/DECISIONS.md, "TQK + LECTURES-2000 indexed"). STALE
+ * NOTE, kept for history: an earlier version of this comment said "books
+ * only, lectures explicitly excluded" — that was true 2026-08-06 through
+ * the initial lecture-corpus expansion, but the code below has included
+ * dated/Queen-Kunti lectures since, and the comment was never updated to
+ * match. Don't trust doc comments over the actual corpusFilter code.
  *
- * Book search uses the SAME production OpenSearch index that powers
- * ask-niranjana-swami (ask-nrs-lectures, ~5,150 book chunks, source_type=
- * "book"), not local grep — hybrid BM25 + semantic vector search, filtered
- * to books only. Reuses the same OPENSEARCH_URL/USER/PASS/INDEX credentials
+ * Search uses the SAME production OpenSearch index that powers
+ * ask-niranjana-swami (ask-nrs-lectures) — hybrid BM25 + semantic vector
+ * search. Reuses the same OPENSEARCH_URL/USER/PASS/INDEX credentials
  * already in this repo's .env.local (confirmed identical to
  * ask-niranjana-swami's ELASTICSEARCH_* values — same server). Semantic
  * search also sidesteps a real problem local grep hit: his published books
@@ -84,6 +92,7 @@ interface SourceHit {
   source_file?: string;
   source_type?: string;
   year?: number;
+  pipeline_version?: string;
 }
 
 const QUEEN_KUNTI_TOPIC = "Teachings of Queen Kunti";
@@ -104,6 +113,11 @@ async function searchSourceIndex(topic: string, matchCount = 6): Promise<SourceH
     bool: {
       should: [
         { term: { source_type: "book" } },
+        // pipeline_version: "v2" lectures (TQK + LECTURES-2000, indexed
+        // 2026-08-11) qualify outright, any year — this is the new
+        // corpus and was transcribed specifically to close Part 2's
+        // coverage gaps, so it isn't gated by the legacy year/topic checks.
+        { term: { pipeline_version: "v2" } },
         {
           bool: {
             filter: [
@@ -127,7 +141,7 @@ async function searchSourceIndex(topic: string, matchCount = 6): Promise<SourceH
 
   const query = {
     size: matchCount,
-    _source: ["content", "title", "source_file", "source_type", "year", "lecture_date_year"],
+    _source: ["content", "title", "source_file", "source_type", "year", "lecture_date_year", "pipeline_version"],
     query: {
       bool: {
         should: [
@@ -194,7 +208,7 @@ async function searchQueenKunti(topic: string, matchCount = 2): Promise<SourceHi
 
   const query = {
     size: matchCount,
-    _source: ["content", "title", "source_file", "source_type", "year"],
+    _source: ["content", "title", "source_file", "source_type", "year", "pipeline_version"],
     query: {
       bool: {
         should: [

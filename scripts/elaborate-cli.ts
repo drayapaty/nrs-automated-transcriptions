@@ -38,7 +38,7 @@ async function main() {
   }
 
   const comparisonPath =
-    process.argv[4] || summaryPath.replace(/(_restored|_cleaned)?\.md$/, "_comparison.md");
+    process.argv[4] || summaryPath.replace(/(_summary|_restored|_cleaned)?\.md$/, "_comparison.md");
 
   if (!existsSync(comparisonPath)) {
     console.error(

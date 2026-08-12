@@ -38,15 +38,15 @@ async function main() {
   const comparisonPath =
     process.argv[3] || summaryPath.replace(/_summary\.md$/, "_comparison.md");
 
-  if (!existsSync(comparisonPath)) {
-    console.error(
-      `Comparison file not found: ${comparisonPath}\nRun /compare first, or pass the path explicitly.`
+  const hasComparison = existsSync(comparisonPath);
+  if (!hasComparison) {
+    console.log(
+      `No comparison.md found at ${comparisonPath} — writing without it (topical talk, no verse anchor to compare against).`
     );
-    process.exit(1);
   }
 
   const summaryText = readFileSync(summaryPath, "utf-8");
-  const comparisonText = readFileSync(comparisonPath, "utf-8");
+  const comparisonText = hasComparison ? readFileSync(comparisonPath, "utf-8") : undefined;
 
   if (!summaryText.trim()) {
     console.error("Summary file is empty");
@@ -55,7 +55,7 @@ async function main() {
 
   console.log(`\n=== Writing chapter material (voiced) ===`);
   console.log(`Summary: ${summaryPath} (${summaryText.length} chars)`);
-  console.log(`Comparison: ${comparisonPath} (${comparisonText.length} chars)`);
+  if (comparisonText) console.log(`Comparison: ${comparisonPath} (${comparisonText.length} chars)`);
 
   const t0 = Date.now();
   const chapter = await writeChapterVoiced(summaryText, comparisonText);
