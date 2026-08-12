@@ -4,6 +4,59 @@
 
 ---
 
+## 2026-08-12 — elaborate.ts Part 2 corpus filter silently excluded all newly-indexed lecture results
+
+**Bug**: `searchSourceIndex()`'s `corpusFilter` checked a field named `lecture_date_year`, but the actual OpenSearch index (including the 892 TQK/LECTURES-2000 lectures indexed this session, in the sibling `ask-niranjana-swami` repo) uses `year`. Every search against the newly-indexed lecture corpus silently returned zero matches for Part 2 (parallel examples from books/lectures) — no error, just empty results, so this would have gone unnoticed without an explicit end-to-end verification query.
+
+**Fix**: added `{ term: { pipeline_version: "v2" } }` as an unconditional `should` branch in `corpusFilter`, and added `pipeline_version` to the `SourceHit` interface / `_source` field lists. Verified end-to-end with a real query after the fix — confirmed 31/31 full-pipeline lectures' Part 2 output actually draws on the new lecture corpus, not just books.
+
+**Also fixed**: the file's header doc-comment was stale (previously claimed "books only, lectures explicitly excluded" — no longer true and hadn't been for a while). Rewrote it and added an explicit warning: "Don't trust doc comments over the actual corpusFilter code."
+
+**How to apply**: whenever a search/filter path returns unexpectedly empty results with no error, check for a field-name mismatch between the filter and the actual indexed document shape before assuming the query logic itself is wrong — this bug produced no exception, just silent under-matching.
+
+---
+
+## 2026-08-12 — Skill/command drift audit: 4 pairs (8 files) had fallen out of sync with actual pipeline behavior
+
+**Full audit** of every `.claude/commands/*.md` + matching `~/.claude/skills/*/SKILL.md` pair against the real current CLI/pipeline code, per Divakar's request ("check the skill or command code with whats in the pipeline"). Found and fixed real drift, not just stale wording:
+
+- `nrs-summarize` command + skill: pointed to a stale prompt file reference and wrongly described the summary template as adaptive when it's actually a fixed V3 locked template with a docx conversion step.
+- `nrs-transcribe` / `nrs-transcribe-conversation` command + skill pairs: didn't mention the fabricated-praṇāma-strip stage (added this session — see the correction entry above) in the pipeline chain description or the "report results" checklist. `nrs-transcribe-conversation`'s skill also had a real wrong-skill-name reference — pointed to a nonexistent `transcribe-bb-lecture` skill instead of the actual `nrs-transcribe-lecture`.
+- `nrs-write-chapter-voiced` command + skill: updated for the optional-comparison change, then updated again after the write-chapter removal decision (above) to state it's the only chapter-writing variant.
+- `nrs-compare` / `nrs-fetch-zoom` command + skill pairs: checked, found accurate, no changes needed.
+
+**How to apply**: command/skill docs drift silently because nothing breaks when they're wrong — they're read by a human or by Mahārāja's Claude Desktop session, not type-checked against the pipeline. Worth a full pass like this periodically after pipeline changes land, not just when a specific doc is touched.
+
+---
+
+## 2026-08-12 — CORRECTION to 2026-08-01 stripper entry: strip-fabricated-pranama.ts was NOT actually reaching the main transcribe pipeline
+
+**The 2026-08-01 entry below ("Post-cleanup praṇāma stripper") is wrong about deployment** — it says the stripper was "wired into `orchestrator.ts` (stage 3b) and `batch-reclean.ts` (step 2)." In reality, as of 2026-08-12, `strip-fabricated-pranama.ts` existed and was correct, but was only ever called from `batch-reclean.ts` — the actual primary pipeline entry points, `scripts/transcribe-cli.ts` and `scripts/transcribe-conversation-cli.ts`, never called it. Every normal transcription run (not going through a manual reclean) was exposed to the fabrication bug this stripper exists to fix. Found via a full 35-lecture BB audit, not a user report.
+
+**Permanent fix**: both CLIs' Stage 2 (Cleanup) now call `stripFabricatedPranama(rawText, cleanedRaw)` directly, inline, before the cleaned text is used for anything downstream. This is now the only place the guard needs to run — no separate reclean step required for it to take effect.
+
+**True scope, verified against the actual function logic (not assumed)**: a first crude detection pass (naive substring matching against the 35 existing BB files) produced a false alarm of 22/35 affected. Re-checking with the real `stripFabricatedPranama()` logic (fuzzy ASCII-folded raw-text probes, not exact match) found the true count was 5/35. Lesson, stated plainly to Divakar when asked "did we screw up": real but non-catastrophic pre-existing pipeline gap, not something newly introduced, and much smaller in practice than the first estimate suggested. All 5 retroactively re-cleaned and re-restored via `scripts/strip-and-rerestore-bb35.ts`, originals backed up as `.pre-pranama-strip.bak`.
+
+**How to apply**: when a guard/fix script exists but a bug still reproduces, verify which pipeline entry points actually call it — don't assume "the fix exists" means "the fix is wired in everywhere it needs to be."
+
+---
+
+## 2026-08-12 — Lecture-note self-reference leakage in voiced chapters: semantic Haiku pass, NOT regex — standing rule for this class of bug
+
+**Bug**: `write-chapter-voiced.ts`'s prompt already explicitly banned lecture-note artifacts ("no 'the speaker says' or 'in this class'"), but this leaked through repeatedly across real generated chapters — "this class," "the class I had prepared," "our previous session," "this session," and, after those explicit words were fixed, subtler implied-live-presence phrasing like "When we left off, we..." that never uses a trigger word at all.
+
+**First fix attempt (rejected)**: a regex trigger-word list (`class`, `session`) feeding per-paragraph Haiku rewrites. Failed three separate times on real output — missed "session" entirely on the first pass, then a second file's flagged "class" mention turned out to be a false positive (unrelated legitimate use — "social classification"), then even a clean word-list still let semantically-implied live-presence phrasing through ("when we left off").
+
+**Divakar's explicit standing directive, verbatim**: "Please for God sake do not use regex" / "you killing me with regex, use Haili and get it doen right."
+
+**Fix**: replaced the entire detect-then-fix pipeline with a single whole-chapter Haiku call (`fixLectureNoteArtifacts()` in `write-chapter-voiced.ts`) that does detection AND correction together, prompted to catch both explicit trigger words and implied shared real-time presence, in one pass over the full text.
+
+**Standing rule — applies beyond this one bug**: regex/pattern-matching is the wrong tool whenever the failure mode is open-vocabulary/semantic (unboundedly many ways to phrase the same underlying meaning). Reach for a single whole-document model pass instead. Reserve deterministic code (regex, exact match) for purely mechanical formatting rules (bullet markers, heading prefixes) where the violation is syntactic, not semantic — that split already exists in the banned-section-label fix below; this generalizes it.
+
+**Verified**: swept all 10 previously-generated chapters (`/tmp/sweep-lecture-artifacts.log`) — 10/10 changed on first pass, confirming the leak was systemic not isolated. New chapters generated after this fix landed (all 35, including the 4 topical/no-comparison ones run 2026-08-12) go through the same pass automatically — no separate sweep step needed going forward.
+
+---
+
 ## 2026-08-12 — write-chapter (plain third-person) removed entirely; write-chapter-voiced is the only chapter-writing tool
 
 **Decision**: Divakar's explicit standing call — "voiced first-person always. dont even keep third person option." Supersedes the 2026-08-06 decision (further up this file) to keep `write-chapter.ts` "for reference/comparison" alongside the new voiced variant. That reference copy is now gone, not just deprioritized.
