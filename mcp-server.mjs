@@ -11,7 +11,8 @@
  *   transcribe_url      — same pipeline from S3/direct URL
  *   transcribe_conversation — multi-speaker diarized transcription
  *   translate_russian   — translate a transcript (.md or .docx) to Russian
- *   summarize_lecture   — Evernote-style summary from a restored transcript
+ *   summarize_lecture   — Evernote-style summary from a restored transcript,
+ *                          English + auto-translated Russian, .md + .docx each
  *   compare_lecture      — vs. Gopīparāṇadhana Vol.1 commentary (needs local source file)
  *   write_chapter_voiced — first-person (Mahārāja's voice) book-chapter draft — the
  *                          only chapter-writing tool; no third-person variant kept
@@ -139,7 +140,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "summarize_lecture",
       description:
-        "Generate an Evernote-style summary of a Bṛhad-bhāgavatāmṛta lecture from its restored transcript. Pure numbered-flow structure (## 1) Title, ### A. sub-point), no fixed section labels. Outputs a _summary.md file next to the input. Takes ~1 minute.",
+        "Generate an Evernote-style summary of a Bṛhad-bhāgavatāmṛta lecture from its restored transcript. Pure numbered-flow structure (## 1) Title, ### A. sub-point), no fixed section labels. Outputs four files next to the input: _summary.md and _summary.docx (English), _summary_ru.md and _summary_ru.docx (Russian, auto-translated). Takes ~3-4 minutes.",
       inputSchema: {
         type: "object",
         properties: {

@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-08-13 — `summarize_lecture` now auto-chains Russian translation
+
+Divakar's reaction to the docx fix above: assumed `summarize_lecture` already gave both languages. It didn't — English and Russian were always two separate tool calls (`summarize_lecture` then `translate_russian`). Explicit call: **wire them together** — `summarize-cli.ts` now produces all four files from one call:
+
+- `_summary.md` (English)
+- `_summary.docx`
+- `_summary_ru.md` (Russian, via `translateStructuredSummary` — the structure-preserving translator, same one used for `.docx`-input round-trips in `translate-cli.ts`, since a freshly-generated summary is always our own V3 structured format)
+- `_summary_ru.docx`
+
+Russian translation failure is non-fatal (logs and continues — the English summary is still fine either way), same pattern as the docx-conversion fixes.
+
+**Verified on a real file**: re-ran on the Aug 6 lecture, all four files confirmed present on disk via `ls`, not just log output. Timing: ~96s English + ~130s Russian ≈ 4 minutes total for this step (previously ~96s alone) — `summarize_lecture`'s MCP tool description timing estimate should be revisited if this ever gets noticeably slower on longer lectures.
+
+**How to apply**: `translate_russian` as a standalone MCP tool still exists and still works (e.g. for re-translating just the Russian side, or translating something that isn't a fresh summary) — this change doesn't remove it, it just means nobody needs to remember to call it separately for the common case.
+
+---
+
 ## 2026-08-13 — Two more never-wired-in gaps found the same way: `summarize-cli.ts` and `translate-cli.ts` didn't always produce `.docx`
 
 Same pattern as the `elaborate` gap above, caught by Divakar the same way — noticing something documented as existing (`.docx` output) wasn't actually happening for the paths that mattered.

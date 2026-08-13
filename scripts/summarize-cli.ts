@@ -6,8 +6,11 @@
  * Usage:
  *   npx tsx scripts/summarize-cli.ts <path-to-transcript.md>
  *
- * Output: same path with _summary.md suffix, plus a matching _summary.docx
- * (via summary-to-docx.js — not optional, every summary gets one).
+ * Output, all produced automatically (not separate steps to remember):
+ *   _summary.md       — English summary
+ *   _summary.docx     — via summary-to-docx.js
+ *   _summary_ru.md    — Russian translation (structure-preserving)
+ *   _summary_ru.docx  — via summary-to-docx.js
  *
  * Requires: ANTHROPIC_API_KEY (reads .env.local)
  */
@@ -22,6 +25,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: join(__dirname, "..", ".env.local") });
 
 import { generateSummary } from "../src/lib/pipeline/summarize";
+import { translateStructuredSummary } from "../src/lib/pipeline/translate";
+
+function toDocx(mdPath: string, docxPath: string) {
+  try {
+    execFileSync("node", [join(__dirname, "summary-to-docx.js"), mdPath, docxPath], {
+      stdio: "inherit",
+    });
+    console.log(`  → ${docxPath}`);
+  } catch (err: any) {
+    console.error(`  docx conversion failed (${mdPath} is still fine): ${err.message}`);
+  }
+}
 
 async function main() {
   const inputPath = process.argv[2];
@@ -50,14 +65,20 @@ async function main() {
   console.log(`Summary: ${summary.length} chars (${elapsed}s)`);
   console.log(`  → ${outPath}`);
 
-  const docxPath = outPath.replace(/\.md$/, ".docx");
+  toDocx(outPath, outPath.replace(/\.md$/, ".docx"));
+
+  console.log(`\n=== Translating to Russian ===`);
   try {
-    execFileSync("node", [join(__dirname, "summary-to-docx.js"), outPath, docxPath], {
-      stdio: "inherit",
-    });
-    console.log(`  → ${docxPath}`);
+    const t1 = Date.now();
+    const ru = await translateStructuredSummary(summary, "ru");
+    const ruElapsed = ((Date.now() - t1) / 1000).toFixed(1);
+    const ruPath = outPath.replace(/\.md$/, "_ru.md");
+    writeFileSync(ruPath, ru);
+    console.log(`Russian: ${ru.length} chars (${ruElapsed}s)`);
+    console.log(`  → ${ruPath}`);
+    toDocx(ruPath, ruPath.replace(/\.md$/, ".docx"));
   } catch (err: any) {
-    console.error(`  docx conversion failed (summary.md is still fine): ${err.message}`);
+    console.error(`  Russian translation failed (English summary is still fine): ${err.message}`);
   }
 }
 
