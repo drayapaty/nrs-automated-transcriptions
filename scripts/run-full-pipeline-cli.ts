@@ -27,11 +27,20 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, "..");
 
-function extractPath(output: string): string | null {
+// Several stages print more than one "→ <path>" line (summarize now emits
+// English + Russian .md/.docx; elaborate emits 7 files). Picking the *last*
+// line unconditionally was a real bug: once summarize started printing
+// _summary_ru.md after _summary.md, "last .md line" silently became the
+// Russian summary, which then got fed into compare/write_chapter/elaborate
+// -- wrong-language input all the way downstream, with no error anywhere.
+// suffixPattern anchors to the exact filename ending wanted, so a stage
+// with multiple real outputs still returns the ONE that matters to the
+// next stage, not whichever line happened to print last.
+function extractPath(output: string, suffixPattern: RegExp = /\.md$/): string | null {
   const lines = output.trim().split("\n");
   for (let i = lines.length - 1; i >= 0; i--) {
-    const m = lines[i].match(/→\s+(\S.*\.md)\s*$/);
-    if (m) return m[1].trim();
+    const m = lines[i].match(/→\s+(\S+\.md)/);
+    if (m && suffixPattern.test(m[1])) return m[1].trim();
   }
   return null;
 }
@@ -59,7 +68,7 @@ async function main() {
   console.log("=== Stage 1/4: Transcribe ===");
   const transcribeOut = run("transcribe-cli.ts", [input]);
   console.log(transcribeOut);
-  const restoredPath = extractPath(transcribeOut);
+  const restoredPath = extractPath(transcribeOut, /_restored\.md$/);
   if (!restoredPath) {
     console.error("Could not find the restored transcript path in transcribe output — stopping.");
     process.exit(1);
@@ -68,9 +77,11 @@ async function main() {
   console.log("\n=== Stage 2/4: Summarize ===");
   const summarizeOut = run("summarize-cli.ts", [restoredPath]);
   console.log(summarizeOut);
-  const summaryPath = extractPath(summarizeOut);
+  // Anchored, not "last .md line" -- summarize also emits _summary_ru.md,
+  // which sorts after _summary.md and would otherwise win by accident.
+  const summaryPath = extractPath(summarizeOut, /_summary\.md$/);
   if (!summaryPath) {
-    console.error("Could not find the summary path in summarize output — stopping.");
+    console.error("Could not find the English summary path in summarize output — stopping.");
     process.exit(1);
   }
 
@@ -81,7 +92,7 @@ async function main() {
       ? run("compare-cli.ts", [summaryPath, part, chapter, verseStart, verseEnd])
       : run("compare-cli.ts", [summaryPath]);
     console.log(compareOut);
-    comparisonPath = extractPath(compareOut);
+    comparisonPath = extractPath(compareOut, /_comparison\.md$/);
   } catch (err: any) {
     console.log(
       `  Skipped — ${String(err.message).split("\n")[0]}\n` +
@@ -92,7 +103,7 @@ async function main() {
   console.log("\n=== Stage 4/5: Write the chapter (Mahārāja's voice) ===");
   const chapterOut = run("write-chapter-voiced-cli.ts", [summaryPath, comparisonPath || undefined]);
   console.log(chapterOut);
-  const chapterPath = extractPath(chapterOut);
+  const chapterPath = extractPath(chapterOut, /_chapter_voiced\.md$/);
 
   console.log("\n=== Stage 5/5: Elaborate ===");
   let elaboratePath: string | null = null;
@@ -100,7 +111,10 @@ async function main() {
     try {
       const elaborateOut = run("elaborate-cli.ts", [restoredPath, summaryPath, comparisonPath]);
       console.log(elaborateOut);
-      elaboratePath = extractPath(elaborateOut);
+      // elaborate-cli.ts prints 7 "→" lines (main + part-1/2/3 + abridged +
+      // both combined variants) -- anchor to the main file, not whichever
+      // printed last (that would be the abridged-combined variant).
+      elaboratePath = extractPath(elaborateOut, /_elaborate\.md$/);
     } catch (err: any) {
       console.log(`  Elaborate failed: ${String(err.message).split("\n")[0]}`);
     }

@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-08-13 — CRITICAL REGRESSION: `run_full_pipeline` was silently feeding the Russian summary into compare/chapter/elaborate
+
+Divakar caught this directly (precise diagnosis, not just a symptom report): `extractPath()` in `run-full-pipeline-cli.ts` returned whichever `→ <path>.md` line printed *last* in a stage's output. That was safe when every stage printed exactly one `.md` line — until the same-day Russian auto-translate fix made `summarize-cli.ts` print four lines (`_summary.md`, `_summary.docx`, `_summary_ru.md`, `_summary_ru.docx`). `_summary_ru.md` sorts after `_summary.md`, so it silently won, and the Russian text got passed as `summaryPath` into compare, write_chapter_voiced, and elaborate — wrong-language input the whole rest of the pipeline, no error anywhere.
+
+**Caught live, mid-run**: a real `run_full_pipeline` invocation (Aug 13, 2026, BB 1.3.17-23, YouTube) was already through transcribe + summarize and about to hit the bug at the compare handoff. Killed the process before it wasted API calls on a wrong-language comparison, then completed compare/write_chapter_voiced/elaborate manually against the correct English `_summary.md` using the already-fixed individual CLIs.
+
+**Fixed properly**: `extractPath()` now takes an anchor pattern instead of blindly taking the last match — e.g. `/_summary\.md$/` (excludes `_summary_ru.md`, which doesn't end in that exact suffix), `/_elaborate\.md$/` (excludes the 6 other files elaborate also prints — part-1/2/3, abridged, both combined variants), etc. Every stage's extraction now names exactly the file it needs, not "whatever happened to print last."
+
+**Also caught proactively while fixing this**: the elaborate stage had the identical latent bug (7 output lines, "last line" picked the abridged-combined variant instead of the main file) — not yet reported, but same root cause, fixed the same way.
+
+**How to apply**: this is the fifth gap of this shape found today (elaborate missing, docx missing ×2, verse-range unpassable, and now this) — and the most serious, since it silently corrupted output rather than skipping a step. Any time a CLI's stdout format changes (new lines added), re-check every downstream `extractPath()`/similar-pattern caller that parses that stdout — "last matching line" is not a safe extraction strategy once a script can print more than one plausible match.
+
+---
+
 ## 2026-08-13 — `run_full_pipeline` now accepts an explicit verse range
 
 Divakar asked what happens if you pass verse numbers along with a YouTube link to `run_full_pipeline` — answer at the time was "nothing, the tool has no such parameters." Real gap, same class as the `elaborate` and `.docx` ones found earlier today: the tool couldn't do something a user would reasonably expect.
