@@ -16,6 +16,9 @@
  *   write_chapter_voiced — first-person (Mahārāja's voice) book-chapter draft — the
  *                          only chapter-writing tool; no third-person variant kept
  *   elaborate             — 4-part elaboration step (needs OpenSearch access)
+ *   run_full_pipeline     — transcribe + summarize + compare + write_chapter_voiced
+ *                          chained in one call (orchestrates the CLIs above, no
+ *                          pipeline logic of its own — see run-full-pipeline-cli.ts)
  *
  * Install in Claude Desktop:
  *   ~/Library/Application Support/Claude/claude_desktop_config.json:
@@ -49,6 +52,7 @@ const SUMMARIZE_SCRIPT = join(__dirname, "scripts", "summarize-cli.ts");
 const COMPARE_SCRIPT = join(__dirname, "scripts", "compare-cli.ts");
 const WRITE_CHAPTER_VOICED_SCRIPT = join(__dirname, "scripts", "write-chapter-voiced-cli.ts");
 const ELABORATE_SCRIPT = join(__dirname, "scripts", "elaborate-cli.ts");
+const RUN_FULL_PIPELINE_SCRIPT = join(__dirname, "scripts", "run-full-pipeline-cli.ts");
 
 function runScript(script, args, timeoutMs = 900_000) {
   const quotedArgs = args.filter(Boolean).map((a) => `"${a}"`).join(" ");
@@ -230,6 +234,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         },
       },
     },
+    {
+      name: "run_full_pipeline",
+      description:
+        "Runs the entire BB lecture pipeline in one call: transcribe, summarize, compare against Gopīparāṇadhana's published commentary (skipped automatically for topical talks with no BB verse range — the chapter is then written from the summary alone), and write the chapter in Mahārāja's own voice. Same four steps as calling transcribe/summarize_lecture/compare_lecture/write_chapter_voiced individually, chained automatically. Takes 8-15 minutes total for a 1-hour lecture.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          path: {
+            type: "string",
+            description: "Absolute path to a local audio file",
+          },
+          url: {
+            type: "string",
+            description: "YouTube URL or a direct audio URL (S3, etc). Use this OR path, not both.",
+          },
+        },
+      },
+    },
   ],
 }));
 
@@ -348,6 +370,34 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             maxBuffer: 10 * 1024 * 1024,
           }
         );
+        return { content: [{ type: "text", text: output }] };
+      } finally {
+        if (cleanupFn) cleanupFn();
+      }
+    }
+
+    if (name === "run_full_pipeline") {
+      let input = args.path;
+      let cleanupFn = null;
+
+      if (!input && args.url) {
+        if (/youtu\.?be/.test(args.url)) {
+          input = args.url; // the transcribe stage inside run-full-pipeline-cli.ts handles YouTube directly
+        } else if (args.url.startsWith("http")) {
+          const dl = downloadAndReencode(args.url);
+          input = dl.monoPath;
+          cleanupFn = dl.cleanup;
+        } else {
+          return { content: [{ type: "text", text: "Invalid url — must be a YouTube link or start with http(s)://" }] };
+        }
+      }
+
+      if (!input) {
+        return { content: [{ type: "text", text: "Provide either path or url" }] };
+      }
+
+      try {
+        const output = runScript(RUN_FULL_PIPELINE_SCRIPT, [input], 1_800_000);
         return { content: [{ type: "text", text: output }] };
       } finally {
         if (cleanupFn) cleanupFn();

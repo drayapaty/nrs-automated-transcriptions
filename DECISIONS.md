@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-08-13 — SUPERSEDES same-day entry below: built `run_full_pipeline` after all
+
+The entry directly below this one ("No dedicated 'run full pipeline' MCP tool (yet)") decided to document the chained-prompt approach and wait before building a dedicated tool. Divakar reconsidered same day — wanted it built now, to make this easier for Mahārāja specifically, rather than leaving it dependent on Claude reliably choosing to chain four tool calls correctly.
+
+**Built**: `scripts/run-full-pipeline-cli.ts` — pure orchestrator, no pipeline logic of its own. Shells out to the existing `transcribe-cli.ts` → `summarize-cli.ts` → `compare-cli.ts` → `write-chapter-voiced-cli.ts` in sequence, extracting each stage's output path from its stdout (`  → <path>` line, the format every existing CLI already prints) to feed the next stage. The compare stage is wrapped in try/catch — a topical talk with no parseable BB verse range makes `compare-cli.ts` exit(1) by design, and the orchestrator treats that as an expected skip (logs it, proceeds to write the chapter from the summary alone) rather than a failure.
+
+Registered as a 10th MCP tool, `run_full_pipeline`, in `mcp-server.mjs`, following the exact same `runScript()` pattern as every other tool. Accepts `path` (local audio) or `url` (YouTube handled directly by the transcribe stage; other direct URLs pre-downloaded via the existing `downloadAndReencode()` helper, same as `transcribe_url` already does).
+
+**Verified**: `node --check` on `mcp-server.mjs` (syntax), `tsx` no-arg run on the new script (usage message + correct exit code), and the compare-skip path specifically — ran `compare-cli.ts` directly against a real topical-talk summary (`2025_10_30_bb_is_sb_summary.md`) and confirmed it exits before any model call, zero API cost, with a message the orchestrator's catch block correctly handles.
+
+**Not yet verified**: a full live end-to-end run (real transcription → summary → chapter) — that costs real API money and ~8-15 minutes, not done as part of this change. Should be run once against a real short lecture before considering this genuinely deploy-ready, not just code-complete.
+
+**How to apply**: if a future request wants a new orchestrated multi-step tool, this is the pattern — shell out to the existing single-purpose CLIs via `execSync`, don't reimplement their logic. Keeps one source of truth per pipeline stage.
+
+## 2026-08-13 — No dedicated "run full pipeline" MCP tool (yet) — document the chained-prompt approach instead
+
+Divakar asked how Mahārāja could run the whole pipeline (transcribe → summarize → compare → write_chapter_voiced) from one prompt. No orchestrator script or tool exists for this.
+
+**Decision**: don't build one yet. Each tool's output filename is predictable from its input, so Claude can already chain multiple MCP tool calls within a single reply if the prompt explicitly asks for the full sequence — this needs zero new code. Documented this in `SETUP-CLAUDE-DESKTOP.md` ("The whole pipeline in one prompt") and the deploy-guide artifact sent to Divakar, with an explicit caveat that it depends on Claude reliably calling all steps in order, and that a real dedicated tool should be built if that turns out to be flaky in practice.
+
+**How to apply**: if Mahārāja reports the chained-prompt approach skipping steps or stalling partway, build a single `run_full_pipeline` MCP tool (script + registration) that does all steps server-side in one call — don't try to fix it by tuning the prompt further.
+
+---
+
 ## 2026-08-13 — Mahārāja's machine actually has Claude Code (via Claude Desktop); MCP stays the only integration surface anyway
 
 **Correction to the 2026-08-10 entry**: that entry said Mahārāja's Mac Mini runs Claude Desktop only, no Claude Code CLI, so `.claude/commands/*.md` and `~/.claude/skills/*` don't reach him. Divakar clarified 2026-08-13: Claude Desktop on his machine includes a Claude Code feature, so slash commands and Skills would in fact work there too — that part of the 2026-08-10 entry was wrong.
