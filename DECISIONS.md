@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-08-13 — Wired the content-based verse matching into `compare_lecture`, not just a batch script
+
+The verse-matching work from 2026-08-12 (`build-bb-verse-manifest.mjs`, `match-verses-by-commentary.mjs`) was a one-off batch tool, run by hand against the 35-lecture set, never connected to the live pipeline. Divakar assumed it had been wired in — it hadn't; `compare_lecture`/`compare-cli.ts` still only did `parseVerseRangeFromFilename()`, confirmed by grepping `compare.ts` for any reference to the matching scripts (none). Corrected that assumption directly rather than let it stand.
+
+**Fixed**: `compare_lecture` (and by extension `run_full_pipeline`) now tries three fallbacks in order when no explicit range is given:
+1. `parseVerseRangeFromFilename()` — existing, unchanged.
+2. `findVerseRangeFromInlineTags()` (new, ported from `build-bb-verse-manifest.mjs`) — reads the `(BB part.chapter.verse)` tags verse-restore already inserted into the sibling `_restored.md` file (derived from the summary path: `..._summary.md` → `..._restored.md`), takes the min/max verse in whichever part.chapter has the most tags.
+3. `findVerseRangeFromContent()` (new, ported from `match-verses-by-commentary.mjs`) — word-4-gram containment match of the transcript's full text against Vol.1's own Translation/Commentary prose, 0.15 score floor. Catches lectures that read the English translation aloud without re-quoting Sanskrit.
+
+If none of the three finds a range, it still exits with the explicit-range instruction — a genuinely topical talk has no range, and this doesn't try to guess one from nothing.
+
+**Verified against two real cases**, not just typechecked:
+- `2023_03_10_bb_taiwan_p2` (no filename range, no inline tags) → tier 3 correctly found BB 1.1.1 at 0.98 confidence, matching the 2026-08-12 batch run's result exactly, and produced a real comparison.
+- `2025_09_14_bb_caitanya` (no filename range, one inline tag `(BB 2.5.234)`) → tier 2 correctly found and attempted the tag, then correctly failed rather than guess — that citation turned out to be from *Volume 2* (Gopa-kumāra's journey, Bhānu Svāmī's translation, explicitly out of scope for this tool), not Part 2 of Volume 1 as the bare `2.5.234` tag format ambiguously suggests. Confirmed by grepping the Vol.1 source file: Part 2 only goes up to chapter 4 there, nothing at chapter 5.
+
+**Known limitation carried forward, now actually reachable in the live tool**: the inline-tag format `(BB part.chapter.verse)` can't distinguish "Part 2 of Volume 1" from "Volume 2" — both would produce a `2.x.y`-shaped tag. It fails safely (no commentary section found) rather than silently pulling the wrong content, but a Volume-2 citation will always look like a lookup failure rather than being flagged as genuinely out-of-scope. Not fixed here — would need the tag format itself to carry which volume, which verse-restore.mjs doesn't currently track.
+
+**How to apply**: don't leave a batch script's output as the only place its logic lives, if the same logic is genuinely needed in the live pipeline — port the reusable core into `src/lib/pipeline/*.ts` and call it from there, same as done here. Verify new fallback logic against real prior-known-correct cases, not just a syntax/typecheck pass.
+
+---
+
 ## 2026-08-13 — `run_full_pipeline` live-tested end-to-end; real-world verse-range gap found
 
 Ran `run-full-pipeline-cli.ts` against real audio for `2025_08_27_bb_1_1_11_12` (the actual `.mp3`, not the curated slug), the "not yet verified" gap noted in the entry above. Succeeded end-to-end: transcribe (125s) → summarize (52s) → write_chapter_voiced (159s), ~6 minutes total, exit 0. Output moved to `~/Downloads/pipeline-test-2026-08-13/` for review, original curated lecture folder untouched. Freshly generated chapter spot-checked clean against the live-session-leak pattern.

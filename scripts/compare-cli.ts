@@ -7,11 +7,16 @@
  * Usage:
  *   npx tsx scripts/compare-cli.ts <path-to-summary.md> [part] [chapter] [verseStart] [verseEnd]
  *
- * If part/chapter/verseStart/verseEnd are omitted, they're parsed from the
- * input filename (expects a "..._bb_<part>_<chapter>_<start>[_<end>]..." pattern,
- * e.g. "2025_11_02_bb_1_2_14_18_restored.md"). Lectures that don't follow a
- * sequential BB verse range (topical talks) aren't supported — pass the range
- * explicitly, or skip this step for that file.
+ * If part/chapter/verseStart/verseEnd are omitted, three fallbacks are tried
+ * in order: (1) parse from the input filename (expects a
+ * "..._bb_<part>_<chapter>_<start>[_<end>]..." pattern, e.g.
+ * "2025_11_02_bb_1_2_14_18_restored.md"); (2) read the "(BB part.chapter.verse)"
+ * tags verse-restore already inserted into the sibling _restored.md file, if
+ * one exists next to the summary; (3) match the summary/transcript text
+ * against Vol.1's own Translation/Commentary prose (catches lectures that
+ * read the English translation aloud without re-quoting the Sanskrit). If
+ * none of the three finds a range, this exits — a genuinely topical talk has
+ * no verse range and this step should be skipped for it, not guessed.
  *
  * Output: same path with _comparison.md suffix.
  *
@@ -30,6 +35,8 @@ import {
   extractCommentarySection,
   generateComparativeAnalysis,
   parseVerseRangeFromFilename,
+  findVerseRangeFromInlineTags,
+  findVerseRangeFromContent,
   GOPIPARANADHANA_VOL1_PATH,
 } from "../src/lib/pipeline/compare";
 
@@ -48,6 +55,9 @@ async function main() {
     process.exit(1);
   }
 
+  const restoredPath = inputPath.replace(/_summary\.md$/, "_restored.md");
+  const restoredText = existsSync(restoredPath) ? readFileSync(restoredPath, "utf-8") : null;
+
   let part: number, chapter: number, verseStart: number, verseEnd: number;
 
   if (process.argv[3]) {
@@ -55,16 +65,29 @@ async function main() {
     chapter = Number(process.argv[4]);
     verseStart = Number(process.argv[5]);
     verseEnd = Number(process.argv[6] || process.argv[5]);
+    console.log(`Verse range: given explicitly.`);
   } else {
-    const parsed = parseVerseRangeFromFilename(basename(inputPath));
-    if (!parsed) {
+    const byFilename = parseVerseRangeFromFilename(basename(inputPath));
+    const byTags = !byFilename && restoredText ? findVerseRangeFromInlineTags(restoredText) : null;
+    const byContent =
+      !byFilename && !byTags ? findVerseRangeFromContent(restoredText || readFileSync(inputPath, "utf-8")) : null;
+
+    const found = byFilename ?? byTags ?? byContent;
+    if (!found) {
       console.error(
-        "Could not parse a BB verse range from the filename. Pass it explicitly:\n" +
-          "  npx tsx scripts/compare-cli.ts <summary.md> <part> <chapter> <verseStart> [verseEnd]"
+        "Could not find a BB verse range — not in the filename, not in inline verse-restore tags" +
+          (restoredText ? "," : " (no sibling _restored.md found),") +
+          " and no content match cleared the confidence floor. Pass it explicitly:\n" +
+          "  npx tsx scripts/compare-cli.ts <summary.md> <part> <chapter> <verseStart> [verseEnd]\n" +
+          "This is expected for a genuinely topical talk — skip this step for it."
       );
       process.exit(1);
     }
-    ({ part, chapter, verseStart, verseEnd } = parsed);
+    ({ part, chapter, verseStart, verseEnd } = found);
+
+    if (byFilename) console.log(`Verse range: parsed from filename.`);
+    else if (byTags) console.log(`Verse range: inferred from ${(byTags as any).tagCount} inline verse-restore tag(s) — verify this looks right.`);
+    else console.log(`Verse range: inferred from content match (score ${(byContent as any).score.toFixed(2)} via ${(byContent as any).via}) — verify this looks right.`);
   }
 
   console.log(`\n=== Comparative analysis: BB ${part}.${chapter}.${verseStart}-${verseEnd} ===`);
