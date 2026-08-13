@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-08-13 — Two more never-wired-in gaps found the same way: `summarize-cli.ts` and `translate-cli.ts` didn't always produce `.docx`
+
+Same pattern as the `elaborate` gap above, caught by Divakar the same way — noticing something documented as existing (`.docx` output) wasn't actually happening for the paths that mattered.
+
+**`summarize-cli.ts`**: `scripts/summary-to-docx.js` has existed for a while but was never called from `summarize-cli.ts` at all — every summary was markdown-only regardless of caller (`summarize_lecture` tool, `run_full_pipeline`, everything). Fixed: `summarize-cli.ts` now always converts its own output to `_summary.docx` via `summary-to-docx.js`, non-fatally (a docx failure logs and continues — the `.md` is still produced either way).
+
+**`translate-cli.ts`**: did call `summary-to-docx.js`, but only `if (isDocx)` — i.e. only when the *input* was itself a `.docx` (the round-trip case: translating an already-generated summary.docx). Translating a plain transcript `.md` (the far more common case) never got a `.docx`, contradicting what `SETUP-CLAUDE-DESKTOP.md` already documented ("Output: ... `*_ru.md` / `*_ru.docx`"). Fixed: docx conversion now always runs regardless of input type, same non-fatal pattern.
+
+**Verified**: re-ran `summarize-cli.ts` on the Aug 6 lecture's restored transcript — `_summary.docx` produced (15KB), confirmed via `ls`, not just log output.
+
+**How to apply**: when a CLI's own doc-comment or the setup guide claims an output file it doesn't actually produce for a given call path, that's the same class of bug as the `elaborate` wiring gap — verify by checking the file exists on disk, not by reading the code and assuming the doc comment matches it.
+
+---
+
 ## 2026-08-13 — CORRECTION: `run_full_pipeline` never actually called `elaborate`
 
 Divakar noticed and asked to verify: `run_full_pipeline` (built and live-tested earlier today) only chained transcribe → summarize → compare → write_chapter_voiced — four stages, not five. `elaborate` was never wired in, despite it being one of the ten documented MCP tools and a core part of the BB book workflow. A real oversight in the original build, not caught by the earlier live test (that test lecture's compare stage was skipped entirely, so the gap never surfaced).

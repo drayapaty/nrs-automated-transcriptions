@@ -6,12 +6,14 @@
  * Usage:
  *   npx tsx scripts/summarize-cli.ts <path-to-transcript.md>
  *
- * Output: same path with _summary.md suffix.
+ * Output: same path with _summary.md suffix, plus a matching _summary.docx
+ * (via summary-to-docx.js — not optional, every summary gets one).
  *
  * Requires: ANTHROPIC_API_KEY (reads .env.local)
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import dotenv from "dotenv";
@@ -47,6 +49,16 @@ async function main() {
 
   console.log(`Summary: ${summary.length} chars (${elapsed}s)`);
   console.log(`  → ${outPath}`);
+
+  const docxPath = outPath.replace(/\.md$/, ".docx");
+  try {
+    execFileSync("node", [join(__dirname, "summary-to-docx.js"), outPath, docxPath], {
+      stdio: "inherit",
+    });
+    console.log(`  → ${docxPath}`);
+  } catch (err: any) {
+    console.error(`  docx conversion failed (summary.md is still fine): ${err.message}`);
+  }
 }
 
 main().catch((err) => {

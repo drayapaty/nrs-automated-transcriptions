@@ -7,9 +7,9 @@
  *   npx tsx scripts/translate-cli.ts <path-to-file.md|.docx> [lang]
  *
  * lang defaults to "ru". Output: same path with _ru.md suffix, plus a
- * matching _ru.docx if the input was itself a .docx (round-tripped through
- * docx-to-summary-md.js / summary-to-docx.js so headings, indentation, and
- * bullet structure survive the translation).
+ * matching _ru.docx always (not just when the input was itself a .docx).
+ * When the input IS a .docx, it's round-tripped through docx-to-summary-md.js
+ * first so headings/indentation/bullet structure survive the translation.
  *
  * Requires: ANTHROPIC_API_KEY (reads .env.local)
  */
@@ -73,10 +73,12 @@ async function main() {
   console.log(`Translated: ${translated.length} chars (${elapsed}s)`);
   console.log(`  → ${outMdPath}`);
 
-  if (isDocx) {
-    const outDocxPath = `${base}_${lang}.docx`;
+  const outDocxPath = `${base}_${lang}.docx`;
+  try {
     execFileSync("node", [join(__dirname, "summary-to-docx.js"), outMdPath, outDocxPath]);
     console.log(`  → ${outDocxPath}`);
+  } catch (err: any) {
+    console.error(`  docx conversion failed (${outMdPath} is still fine): ${err.message}`);
   }
 
   if (tmpDir) rmSync(tmpDir, { recursive: true, force: true });
