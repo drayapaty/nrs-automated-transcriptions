@@ -8,7 +8,12 @@
  * single Claude Desktop prompt instead of five separate tool calls.
  *
  * Usage:
- *   npx tsx scripts/run-full-pipeline-cli.ts <youtube-url | local-audio-path>
+ *   npx tsx scripts/run-full-pipeline-cli.ts <youtube-url | local-audio-path> [part] [chapter] [verseStart] [verseEnd]
+ *
+ * The verse-range args are optional — when omitted, the compare stage falls
+ * back to its own 3-tier auto-detect (filename, inline verse-restore tags,
+ * content-match against the commentary). When given, they're passed straight
+ * through to compare-cli.ts instead, same as calling that tool directly.
  *
  * Purely an orchestrator — each stage shells out to the existing standalone
  * CLI for that stage, so it runs the exact same code path as calling the
@@ -43,8 +48,11 @@ function run(script: string, args: (string | undefined)[]): string {
 
 async function main() {
   const input = process.argv[2];
+  const [part, chapter, verseStart, verseEnd] = process.argv.slice(3, 7);
   if (!input) {
-    console.error("Usage: npx tsx scripts/run-full-pipeline-cli.ts <youtube-url | local-audio-path>");
+    console.error(
+      "Usage: npx tsx scripts/run-full-pipeline-cli.ts <youtube-url | local-audio-path> [part] [chapter] [verseStart] [verseEnd]"
+    );
     process.exit(1);
   }
 
@@ -69,7 +77,9 @@ async function main() {
   console.log("\n=== Stage 3/5: Compare against the published commentary ===");
   let comparisonPath: string | null = null;
   try {
-    const compareOut = run("compare-cli.ts", [summaryPath]);
+    const compareOut = part
+      ? run("compare-cli.ts", [summaryPath, part, chapter, verseStart, verseEnd])
+      : run("compare-cli.ts", [summaryPath]);
     console.log(compareOut);
     comparisonPath = extractPath(compareOut);
   } catch (err: any) {

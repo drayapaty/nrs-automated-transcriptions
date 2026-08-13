@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-08-13 — `run_full_pipeline` now accepts an explicit verse range
+
+Divakar asked what happens if you pass verse numbers along with a YouTube link to `run_full_pipeline` — answer at the time was "nothing, the tool has no such parameters." Real gap, same class as the `elaborate` and `.docx` ones found earlier today: the tool couldn't do something a user would reasonably expect.
+
+**Fixed**: `run-full-pipeline-cli.ts` now takes optional `[part] [chapter] [verseStart] [verseEnd]` positional args after the input; when given, they're passed straight through to `compare-cli.ts` instead of relying on its 3-tier auto-detect. `run_full_pipeline`'s MCP tool schema gained matching optional `part`/`chapter`/`verseStart`/`verseEnd` number fields, passed through in the handler.
+
+**Verified live**: ran it on a real new lecture (Aug 13, 2026, BB 1.3.17-23, YouTube) with the explicit range given.
+
+**How to apply**: this is now the fourth gap of this exact shape found today (elaborate missing, docx missing from two CLIs, verse-range not passable) — all four were "the tool description implies X, the code doesn't do X." Worth a deliberate pass checking every MCP tool's actual behavior against its own description before considering the pipeline genuinely stable, rather than waiting for each gap to surface one at a time.
+
+---
+
 ## 2026-08-13 — `summarize_lecture` now auto-chains Russian translation
 
 Divakar's reaction to the docx fix above: assumed `summarize_lecture` already gave both languages. It didn't — English and Russian were always two separate tool calls (`summarize_lecture` then `translate_russian`). Explicit call: **wire them together** — `summarize-cli.ts` now produces all four files from one call:

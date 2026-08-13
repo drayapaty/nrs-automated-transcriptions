@@ -18,8 +18,10 @@
  *                          only chapter-writing tool; no third-person variant kept
  *   elaborate             — 4-part elaboration step (needs OpenSearch access)
  *   run_full_pipeline     — transcribe + summarize + compare + write_chapter_voiced
- *                          + elaborate, chained in one call (orchestrates the CLIs above, no
- *                          pipeline logic of its own — see run-full-pipeline-cli.ts)
+ *                          + elaborate, chained in one call (orchestrates the CLIs above,
+ *                          no pipeline logic of its own — see run-full-pipeline-cli.ts).
+ *                          part/chapter/verseStart/verseEnd are optional — pass them to
+ *                          skip compare's auto-detect and go straight to the given range.
  *
  * Install in Claude Desktop:
  *   ~/Library/Application Support/Claude/claude_desktop_config.json:
@@ -250,6 +252,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
             type: "string",
             description: "YouTube URL or a direct audio URL (S3, etc). Use this OR path, not both.",
           },
+          part: { type: "number", description: "BB part number — optional, only needed if the verse range can't be auto-detected (filename, verses matched during transcription, or content match against the commentary)" },
+          chapter: { type: "number", description: "BB chapter number — optional, see part" },
+          verseStart: { type: "number", description: "Starting verse number — optional, see part" },
+          verseEnd: { type: "number", description: "Ending verse number — optional, see part" },
         },
       },
     },
@@ -398,7 +404,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       try {
-        const output = runScript(RUN_FULL_PIPELINE_SCRIPT, [input], 2_700_000);
+        const output = runScript(
+          RUN_FULL_PIPELINE_SCRIPT,
+          [input, args.part, args.chapter, args.verseStart, args.verseEnd],
+          2_700_000
+        );
         return { content: [{ type: "text", text: output }] };
       } finally {
         if (cleanupFn) cleanupFn();
