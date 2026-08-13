@@ -17,7 +17,7 @@
  *                          only chapter-writing tool; no third-person variant kept
  *   elaborate             — 4-part elaboration step (needs OpenSearch access)
  *   run_full_pipeline     — transcribe + summarize + compare + write_chapter_voiced
- *                          chained in one call (orchestrates the CLIs above, no
+ *                          + elaborate, chained in one call (orchestrates the CLIs above, no
  *                          pipeline logic of its own — see run-full-pipeline-cli.ts)
  *
  * Install in Claude Desktop:
@@ -237,7 +237,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
     {
       name: "run_full_pipeline",
       description:
-        "Runs the entire BB lecture pipeline in one call: transcribe, summarize, compare against Gopīparāṇadhana's published commentary (skipped automatically for topical talks with no BB verse range — the chapter is then written from the summary alone), and write the chapter in Mahārāja's own voice. Same four steps as calling transcribe/summarize_lecture/compare_lecture/write_chapter_voiced individually, chained automatically. Takes 8-15 minutes total for a 1-hour lecture.",
+        "Runs the entire BB lecture pipeline in one call: transcribe, summarize, compare against Gopīparāṇadhana's published commentary (skipped automatically for topical talks with no BB verse range — the chapter is then written from the summary alone), write the chapter in Mahārāja's own voice, and elaborate (skipped automatically if there was no comparison to elaborate on). Same five steps as calling transcribe/summarize_lecture/compare_lecture/write_chapter_voiced/elaborate individually, chained automatically. Takes 10-20 minutes total for a 1-hour lecture.",
       inputSchema: {
         type: "object",
         properties: {
@@ -397,7 +397,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       try {
-        const output = runScript(RUN_FULL_PIPELINE_SCRIPT, [input], 1_800_000);
+        const output = runScript(RUN_FULL_PIPELINE_SCRIPT, [input], 2_700_000);
         return { content: [{ type: "text", text: output }] };
       } finally {
         if (cleanupFn) cleanupFn();

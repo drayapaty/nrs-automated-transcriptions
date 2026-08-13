@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-08-13 — CORRECTION: `run_full_pipeline` never actually called `elaborate`
+
+Divakar noticed and asked to verify: `run_full_pipeline` (built and live-tested earlier today) only chained transcribe → summarize → compare → write_chapter_voiced — four stages, not five. `elaborate` was never wired in, despite it being one of the ten documented MCP tools and a core part of the BB book workflow. A real oversight in the original build, not caught by the earlier live test (that test lecture's compare stage was skipped entirely, so the gap never surfaced).
+
+**Fixed**: added Stage 5/5 to `run-full-pipeline-cli.ts` — calls `elaborate-cli.ts` with the restored transcript, summary, and comparison paths, only when a comparison was actually produced (same graceful-skip logic as everywhere else — elaborate structurally needs a compared verse range). Updated the MCP tool description and header comment in `mcp-server.mjs` to mention all five stages, and bumped the tool's timeout from 30 to 45 minutes to give the extra stage room on longer lectures.
+
+**Not yet re-verified live** — the fix was made while a real lecture (`08-06-26.mp3`, Aug 6 2026, BB 1.3.11-17) was already mid-run under the old 4-stage script (editing the file on disk doesn't affect an already-started `tsx` process). That lecture will need elaborate run manually afterward, same pattern as the Dec 28 fix earlier today. The fix itself should be verified on the next fresh `run_full_pipeline` invocation.
+
+**How to apply**: when building an orchestrator that chains N existing tools, explicitly list all N against the actual tool inventory before calling it done — "matches the description" isn't the same as "matches what actually exists." A live test only catches gaps the specific test case happens to exercise.
+
+---
+
 ## 2026-08-13 — Wired the content-based verse matching into `compare_lecture`, not just a batch script
 
 The verse-matching work from 2026-08-12 (`build-bb-verse-manifest.mjs`, `match-verses-by-commentary.mjs`) was a one-off batch tool, run by hand against the 35-lecture set, never connected to the live pipeline. Divakar assumed it had been wired in — it hadn't; `compare_lecture`/`compare-cli.ts` still only did `parseVerseRangeFromFilename()`, confirmed by grepping `compare.ts` for any reference to the matching scripts (none). Corrected that assumption directly rather than let it stand.

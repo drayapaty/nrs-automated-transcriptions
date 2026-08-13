@@ -3,8 +3,9 @@
  * Standalone CLI: the entire BB lecture pipeline in one command —
  * transcribe, summarize, compare (skipped automatically when no BB verse
  * range is parseable, e.g. topical talks), write the chapter in Mahārāja's
- * own voice. Built so the whole thing can run from a single Claude Desktop
- * prompt instead of four separate tool calls.
+ * own voice, and elaborate (skipped automatically when there's no
+ * comparison to elaborate on). Built so the whole thing can run from a
+ * single Claude Desktop prompt instead of five separate tool calls.
  *
  * Usage:
  *   npx tsx scripts/run-full-pipeline-cli.ts <youtube-url | local-audio-path>
@@ -65,7 +66,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log("\n=== Stage 3/4: Compare against the published commentary ===");
+  console.log("\n=== Stage 3/5: Compare against the published commentary ===");
   let comparisonPath: string | null = null;
   try {
     const compareOut = run("compare-cli.ts", [summaryPath]);
@@ -78,16 +79,31 @@ async function main() {
     );
   }
 
-  console.log("\n=== Stage 4/4: Write the chapter (Mahārāja's voice) ===");
+  console.log("\n=== Stage 4/5: Write the chapter (Mahārāja's voice) ===");
   const chapterOut = run("write-chapter-voiced-cli.ts", [summaryPath, comparisonPath || undefined]);
   console.log(chapterOut);
   const chapterPath = extractPath(chapterOut);
+
+  console.log("\n=== Stage 5/5: Elaborate ===");
+  let elaboratePath: string | null = null;
+  if (comparisonPath) {
+    try {
+      const elaborateOut = run("elaborate-cli.ts", [restoredPath, summaryPath, comparisonPath]);
+      console.log(elaborateOut);
+      elaboratePath = extractPath(elaborateOut);
+    } catch (err: any) {
+      console.log(`  Elaborate failed: ${String(err.message).split("\n")[0]}`);
+    }
+  } else {
+    console.log("  Skipped — no comparison.md (elaborate needs a compared verse range).");
+  }
 
   console.log("\n=== Full pipeline done ===");
   console.log(`Transcript: ${restoredPath}`);
   console.log(`Summary:    ${summaryPath}`);
   console.log(`Comparison: ${comparisonPath || "(none — topical talk or source file missing)"}`);
   console.log(`Chapter:    ${chapterPath || "(not found in output — check the log above)"}`);
+  console.log(`Elaborate:  ${elaboratePath || "(none — no comparison, or elaborate failed)"}`);
 }
 
 main().catch((err) => {
