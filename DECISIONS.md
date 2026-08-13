@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-08-13 — `run_full_pipeline` live-tested end-to-end; real-world verse-range gap found
+
+Ran `run-full-pipeline-cli.ts` against real audio for `2025_08_27_bb_1_1_11_12` (the actual `.mp3`, not the curated slug), the "not yet verified" gap noted in the entry above. Succeeded end-to-end: transcribe (125s) → summarize (52s) → write_chapter_voiced (159s), ~6 minutes total, exit 0. Output moved to `~/Downloads/pipeline-test-2026-08-13/` for review, original curated lecture folder untouched. Freshly generated chapter spot-checked clean against the live-session-leak pattern.
+
+**Real finding**: the compare stage was skipped, correctly, because the raw audio filename (`2025.08.27_Budapest_Brihad_Bhagavatamrita_1.1.11_12_en.mp3`, slugified to `..._brihad_bhagavatamrita_1_1_11_12_en...`) doesn't match `parseVerseRangeFromFilename()`'s expected `..._bb_<part>_<chapter>_<start>[_<end>]...` pattern — only the curated 35-lecture set's renamed slugs do. This isn't a bug in the orchestrator (the skip is exactly the designed fallback for topical talks), but it means in practice, most raw source filenames from Zoom/audio exports will hit the skip path on `run_full_pipeline` unless renamed first or the verse range is passed explicitly.
+
+**How to apply**: for a lecture known to be sequential-verse, either rename the source audio to the `bb_<part>_<chapter>_<start>_<end>` convention before transcribing, or don't rely on `run_full_pipeline`'s single-call convenience for that lecture — run `compare_lecture` separately afterward with the range passed explicitly, then `write_chapter_voiced`.
+
+---
+
 ## 2026-08-13 — SUPERSEDES same-day entry below: built `run_full_pipeline` after all
 
 The entry directly below this one ("No dedicated 'run full pipeline' MCP tool (yet)") decided to document the chained-prompt approach and wait before building a dedicated tool. Divakar reconsidered same day — wanted it built now, to make this easier for Mahārāja specifically, rather than leaving it dependent on Claude reliably choosing to chain four tool calls correctly.
