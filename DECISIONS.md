@@ -4,6 +4,51 @@
 
 ---
 
+## 2026-08-13 — Mahārāja's machine actually has Claude Code (via Claude Desktop); MCP stays the only integration surface anyway
+
+**Correction to the 2026-08-10 entry**: that entry said Mahārāja's Mac Mini runs Claude Desktop only, no Claude Code CLI, so `.claude/commands/*.md` and `~/.claude/skills/*` don't reach him. Divakar clarified 2026-08-13: Claude Desktop on his machine includes a Claude Code feature, so slash commands and Skills would in fact work there too — that part of the 2026-08-10 entry was wrong.
+
+**Decision anyway: keep MCP as the only integration surface, don't deploy skills/commands.** Not because they wouldn't work, but because MCP already gives everything they would: natural-language triggering (no need to learn `/nrs-transcribe` syntax), and it's git-tracked (`mcp-server.mjs` ships in the same package, same `npm install`/restart as everything else). Skills live outside git in `~/.claude/skills/` — a second, manual deploy step every time the pipeline changes, easy to forget. Confirmed this isn't hypothetical: `translate-russian` (the one Skill already in use, predating this pipeline's Skills work) is currently stale — it duplicates the Russian translation prompt inline rather than calling the real CLI script, and that copy has already drifted from `src/lib/pipeline/translate.ts`.
+
+**How to apply**: don't build or deploy `.claude/skills/nrs-*` or wire up `.claude/commands/*.md` for Mahārāja's machine unless a concrete reason to want exact slash-command control comes up later. If it does, `translate-russian`'s drift should be fixed first as part of that work, not left as-is.
+
+## 2026-08-13 — No dedicated "run full pipeline" MCP tool (yet) — document the chained-prompt approach instead
+
+Divakar asked how Mahārāja could run the whole pipeline (transcribe → summarize → compare → write_chapter_voiced) from one prompt. No orchestrator script or tool exists for this.
+
+**Decision**: don't build one yet. Each tool's output filename is predictable from its input, so Claude can already chain multiple MCP tool calls within a single reply if the prompt explicitly asks for the full sequence — this needs zero new code. Documented this in `SETUP-CLAUDE-DESKTOP.md` ("The whole pipeline in one prompt") and the deploy-guide artifact sent to Divakar, with an explicit caveat that it depends on Claude reliably calling all steps in order, and that a real dedicated tool should be built if that turns out to be flaky in practice.
+
+**How to apply**: if Mahārāja reports the chained-prompt approach skipping steps or stalling partway, build a single `run_full_pipeline` MCP tool (script + registration) that does all steps server-side in one call — don't try to fix it by tuning the prompt further.
+
+---
+
+## 2026-08-12 — Full 35-lecture manual sweep for live-session leaks: 12 chapters fixed, one truncated file caught and regenerated
+
+Following the `2026_04_26_bb_1_2_50_52` finding (the automated Haiku pass missing 2 of 3 real leaks on rerun — see the caveat entry above), ran a full manual review of all 35 `*_chapter_voiced.md` files via 5 parallel read-only agents, explicitly instructed to find only genuine live-audience-address/shared-real-time-moment phrasing and not over-flag generic reader address or normal book cross-referencing.
+
+**Result: 11 more chapters had real leaks (12 counting `2026_04_26` from the prior entry), ~19 individual spots total.** Worst case was `2026_03_29_bb_budapest` — 6 separate spots, effectively the whole opening/closing frame was written as a live-session address ("our morning class series," "where we left off," "another session," "this morning... before class," an invitation to "chant together... this morning"). Also found:
+- `2025_08_27_bb_1_1_11_12`, `2025_09_07_bb_1_1_12`, `2025_09_21_bb_two_types_dainya`, `2025_09_28_bb_dainya`, `2025_10_05_bb_two_useless` (2 spots), `2025_10_30_bb_is_sb`, `2025_12_21_bb_book_dist` (1 spot the earlier same-day trim had missed), `2026_04_05_bb_budapest`, `2026_04_12_bb_1_2_37_49`, `2026_05_02_nrsimha_caturdasi_en_hu` (3 spots, all "Today is..."/"on this appearance day" framing).
+
+All fixed by hand — read each exact spot in context, rewrote to preserve meaning/content while removing the live-audience presumption, no bulk find-replace. Originals backed up as `*.pre-sweep2.bak` (and `2025_12_21`'s earlier `.pre-trim.bak` / `2026_04_26`'s `.pre-resweep.bak` from the prior entry).
+
+**Separate bug caught in the same pass, not a leak issue**: `2026_07_26_bb_1_2_98_100_chapter_voiced.md` was truncated mid-sentence on disk (ends at "...because it is in that perpetual reaching, that endless hunger for"). Regenerated via `write-chapter-voiced-cli.ts`; the fresh regeneration introduced one new leak of its own ("something we have been studying in parallel"), fixed the same way. Original truncated version backed up as `.pre-regen.bak`.
+
+**How to apply, updating the caveat above**: even after two rounds (Haiku pass, then a targeted rerun), a full manual read still surfaced 19 more real instances the automated pass never touched. Treat `fixLectureNoteArtifacts()` as a first-pass filter, not a guarantee — a real spot-check (or, at this book's scale, a full read) is still the only reliable way to catch this class of leak before a chapter is considered ready for review. Also: regenerating a chapter to fix one bug (like the truncation here) is not risk-free — always re-scan the fresh output too, since the underlying prompt still has this weakness.
+
+---
+
+## 2026-08-12 — CAVEAT to the "no-regex, use Haiku" fix: the semantic pass has a real false-negative rate, spot-checking still needed
+
+Manually reviewed `2026_04_26_bb_1_2_50_52`'s voiced chapter (already generated under the live `fixLectureNoteArtifacts()` pass, not a pre-fix leftover) and found 3 real live-session self-references the automated pass had missed: two audience-address lines ("those of you who were present there... those who were not," "those who were with us when we studied verse twenty-two... may remember") and one "next time" closer.
+
+**Re-ran the same chapter through `fixLectureNoteArtifacts()` again** (`scripts/resweep-one.mjs`, ad hoc) to see if a second pass would catch them: it fixed only the "next time" closer, still missed both audience-address lines. Fixed those two by hand instead.
+
+**Conclusion**: the whole-document Haiku pass (2026-08-12 entry above) is a real improvement over regex and should stay the default approach for this class of bug, but it is not 100% reliable — audience-address phrasing ("those of you who were present," "those who were with us") seems to be a specific blind spot, distinct from the "when we left off" pattern the prompt already names explicitly. Re-running the same pass on a miss is not guaranteed to catch it the second time either.
+
+**How to apply**: don't treat a chapter as clean just because it went through `fixLectureNoteArtifacts()`. Spot-check is still worthwhile, especially for lectures that reference a specific dated event (a retreat, a talk elsewhere) where "who was there" phrasing is more likely to surface. Consider adding "audience-address phrasing (who was/wasn't present at a specific event)" as an explicit named example in the system prompt, alongside "when we left off" — the current prompt's named examples skew toward continuity phrasing and may be under-covering the audience-address variant.
+
+---
+
 ## 2026-08-12 — elaborate.ts Part 2 corpus filter silently excluded all newly-indexed lecture results
 
 **Bug**: `searchSourceIndex()`'s `corpusFilter` checked a field named `lecture_date_year`, but the actual OpenSearch index (including the 892 TQK/LECTURES-2000 lectures indexed this session, in the sibling `ask-niranjana-swami` repo) uses `year`. Every search against the newly-indexed lecture corpus silently returned zero matches for Part 2 (parallel examples from books/lectures) — no error, just empty results, so this would have gone unnoticed without an explicit end-to-end verification query.

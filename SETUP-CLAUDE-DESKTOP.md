@@ -118,6 +118,17 @@ If the verse range isn't in the filename, give it explicitly:
 (needs OpenSearch env vars and the Vol.1 source file — see setup steps 2-3 above; run compare first)
 > Run the elaborate step on this lecture. Restored transcript: /Users/nbyers/Downloads/lecture_restored.md, summary: /Users/nbyers/Downloads/lecture_summary.md
 
+### The whole pipeline in one prompt
+No separate "run everything" tool exists — each tool's output filename is predictable from
+its input, so Claude will chain several tools in one reply if the prompt asks for it:
+> Run the full pipeline on this lecture: transcribe it, summarize it, compare it against the commentary, then write it as a chapter in my own voice. Just run the tools in sequence and tell me the final file paths when done.
+> /Users/nbyers/Downloads/lecture.mp3
+
+This relies on Claude choosing to call all four tools correctly in order — watch it the
+first few times. If it stops partway, ask it to continue from wherever it left off (each
+tool's output file already exists on disk, so nothing is lost). If this proves unreliable
+in practice, a single dedicated pipeline tool could be built instead.
+
 ## Output
 All files are saved to `~/Downloads/`:
 - `*_raw.md` — raw Whisper output
