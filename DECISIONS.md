@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-02 — Deploy guide omitted `OPENAI_API_KEY`; `elaborate` would have failed on Mahārāja's machine
+
+Found while assembling the complete `nrs-transcribe` MCP env block for his install. `src/lib/pipeline/elaborate.ts` embeds the topic with OpenAI `text-embedding-3-small` (`openai().embeddings.create`, via `clients.ts`) for the semantic half of its OpenSearch hybrid search. `clients.ts` throws `OPENAI_API_KEY not set` if absent. Neither `SETUP-CLAUDE-DESKTOP.md` nor the deploy guide / DEPLOY-INSTRUCTIONS listed it — they only listed Groq, Anthropic, Deepgram and `OPENSEARCH_*`.
+
+**Consequence if shipped as documented**: `elaborate` fails outright, and inside `run_full_pipeline` the Stage 5 try/catch swallows it ("Elaborate failed: …") so the run still exits 0 with no elaborate files — a silent miss, same shape as the other "documented but not actually working" gaps found 2026-08-13.
+
+**Fixed**: `SETUP-CLAUDE-DESKTOP.md` (shipped in the zip) now lists `OPENAI_API_KEY` in the config block and explains why. The published deploy-guide artifact was patched to match. The full block with real values is built from `.env.local` into a private file outside the repo, never committed.
+
+**Env vars the MCP tools actually read** (verified by grep, not recalled): `GROQ_API_KEY` (+ optional `_2.._14` rotation), `ANTHROPIC_API_KEY`, `DEEPGRAM_API_KEY` (conversation tool only), `OPENAI_API_KEY` + `OPENSEARCH_URL/USER/PASS/INDEX` + `NODE_TLS_REJECT_UNAUTHORIZED` (elaborate only). Default for Mahārāja: single `GROQ_API_KEY`; extra Groq keys are Divakar's call (the paid one is `GROQ_API_KEY_14`, billed to Divakar).
+
+**How to apply**: when writing install docs, derive the env list from `grep process.env` over the code the tools reach, not from memory of what the tool "needs".
+
+---
+
 ## 2026-08-13 — CRITICAL REGRESSION: `run_full_pipeline` was silently feeding the Russian summary into compare/chapter/elaborate
 
 Divakar caught this directly (precise diagnosis, not just a symptom report): `extractPath()` in `run-full-pipeline-cli.ts` returned whichever `→ <path>.md` line printed *last* in a stage's output. That was safe when every stage printed exactly one `.md` line — until the same-day Russian auto-translate fix made `summarize-cli.ts` print four lines (`_summary.md`, `_summary.docx`, `_summary_ru.md`, `_summary_ru.docx`). `_summary_ru.md` sorts after `_summary.md`, so it silently won, and the Russian text got passed as `summaryPath` into compare, write_chapter_voiced, and elaborate — wrong-language input the whole rest of the pipeline, no error anywhere.

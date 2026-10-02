@@ -30,6 +30,7 @@
            "GROQ_API_KEY": "gsk_...",
            "ANTHROPIC_API_KEY": "sk-ant-...",
            "DEEPGRAM_API_KEY": "...",
+           "OPENAI_API_KEY": "sk-...",
            "OPENSEARCH_URL": "https://148.251.70.122:9200",
            "OPENSEARCH_USER": "admin",
            "OPENSEARCH_PASS": "...",
@@ -42,10 +43,13 @@
    ```
    Notes:
    - `DEEPGRAM_API_KEY` is only needed for the conversation/diarization tool.
-   - `OPENSEARCH_*` and `NODE_TLS_REJECT_UNAUTHORIZED` are only needed for the
-     `elaborate` tool (Part 2 — parallel examples from books/lectures). Ask
-     Divakar for the real `OPENSEARCH_PASS` value; omit these four lines
-     entirely if you don't plan to use `elaborate` yet.
+   - `OPENAI_API_KEY`, `OPENSEARCH_*` and `NODE_TLS_REJECT_UNAUTHORIZED` are only
+     needed for the `elaborate` tool (Part 2 — parallel examples from books/lectures).
+     `OPENAI_API_KEY` is used to embed the topic for the semantic search against
+     OpenSearch — without it `elaborate` fails ("OPENAI_API_KEY not set"), and inside
+     `run_full_pipeline` that stage is caught and skipped, so no elaborate output
+     appears. Ask Divakar for the real `OPENAI_API_KEY` and `OPENSEARCH_PASS`
+     values; omit all of these lines only if you don't plan to use `elaborate`.
    - `NODE_TLS_REJECT_UNAUTHORIZED=0` is required because that OpenSearch
      host uses a self-signed certificate — this only weakens TLS verification
      for connections this one process makes, not system-wide.
