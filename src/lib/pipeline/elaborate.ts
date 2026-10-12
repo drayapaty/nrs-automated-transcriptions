@@ -324,21 +324,30 @@ export async function elaborate(
   const topics = await findTopics(evernoteSummary);
   const sourceExcerpts = await searchSourcesForTopics(topics);
 
-  const response = await anthropic().messages.create({
-    model: CLAUDE_MODEL,
-    max_tokens: 16_000,
-    system: ELABORATE_SYSTEM_PROMPT,
-    messages: [
-      {
-        role: "user",
-        content:
-          `TRANSCRIPT:\n${transcript}\n\n---\n\n` +
-          `EVERNOTE SUMMARY:\n${evernoteSummary}\n\n---\n\n` +
-          `COMPARISON NOTES:\n${comparisonNotes}\n\n---\n\n` +
-          `SOURCE SEARCH RESULTS (topics searched: ${topics.join(", ") || "none"}):\n${sourceExcerpts || "(no matches found)"}`,
-      },
-    ],
-  });
+  // Streamed, not a single blocking messages.create(). This call sends ~160K
+  // chars (transcript + summary + comparison + up to 6 topics x 8 source
+  // passages) and asks for up to 16K output tokens. Non-streamed, the socket
+  // sat silent for ~3 minutes and was closed by the other side
+  // (UND_ERR_SOCKET, surfaced by the SDK as "Connection error."), reproducibly,
+  // 2026-10-11 on the 2025-07-18 Budapest lecture. Streaming keeps bytes
+  // flowing; finalMessage() returns the same Message shape as create().
+  const response = await anthropic()
+    .messages.stream({
+      model: CLAUDE_MODEL,
+      max_tokens: 16_000,
+      system: ELABORATE_SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content:
+            `TRANSCRIPT:\n${transcript}\n\n---\n\n` +
+            `EVERNOTE SUMMARY:\n${evernoteSummary}\n\n---\n\n` +
+            `COMPARISON NOTES:\n${comparisonNotes}\n\n---\n\n` +
+            `SOURCE SEARCH RESULTS (topics searched: ${topics.join(", ") || "none"}):\n${sourceExcerpts || "(no matches found)"}`,
+        },
+      ],
+    })
+    .finalMessage();
   const block = response.content.find((b) => b.type === "text");
   const text = (block as { text?: string } | undefined)?.text;
   if (!text) throw new Error("Elaborate step returned no text");

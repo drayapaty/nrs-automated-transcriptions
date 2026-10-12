@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-10-11 — `elaborate` failed with "Connection error." on large inputs: root-caused, fixed by streaming the final call
+
+Mahārāja's machine produced a summary, a hand-written comparison and a chapter for the 2025-07-18 Budapest lecture (Bhakti-rasāmṛta-sindhu / SB 10.25.16, not BB) but no elaborate output. Re-running `elaborate-cli.ts` here on his files failed identically twice: `Elaborate step failed: Connection error.`
+
+**Not** the cause (each ruled out with evidence, not assumed): bad or missing keys, Anthropic/OpenAI/OpenSearch being unreachable (curl and isolated SDK calls all returned 200), and a transient blip (reproduced twice, same timing).
+
+**Actual cause** (call-level trace through the real `elaborate()`): topics, 6 embeddings and 6 OpenSearch searches all succeed within ~6s. The final `claude-sonnet-4-6` call, `max_tokens` 16,000 with ~160K chars of input (transcript + summary + comparison + 6 topics x 8 passages), is non-streamed; after ~182s the socket is closed by the other side — `SocketError: other side closed [UND_ERR_SOCKET]`, which the Anthropic SDK reports only as "Connection error." The CLI prints just `err.message`, so the underlying cause was invisible until traced.
+
+**Fix**: `elaborate.ts` now uses `messages.stream(...).finalMessage()` for that call (same `Message` shape). Verified live on the same inputs: 7 output files on disk, elaborate 148s, abridge 47s, exit clean. Part 2 cited 5 real indexed lectures (all spot-checked against the index, including one whose index title has a typo the model silently normalised).
+
+**Other findings**
+- `elaborate` has no BB or Vol.1 dependency (grep-verified) — a manually written comparison works as input, so non-BB lectures can be elaborated. `SETUP-CLAUDE-DESKTOP.md` wrongly said elaborate "depends on" the Vol.1 file; corrected.
+- Part 2 in this run cited 16 lectures and 0 books. Plausible for this topic; means the book corpus contributed nothing here.
+- In the folder Mahārāja sent, `*_other_restored.md` is OUR Aug-12 batch transcript of the same lecture, not his — his own restored transcript was not included, so elaborate was run against ours plus his `brs` summary/comparison (the `brs` summary is a corrected version of ours).
+
+**How to apply**: any single non-streamed model call that can run past ~3 minutes should stream. Check `write-chapter-voiced.ts` (8K max_tokens, 200-300s observed, succeeded so far) and `summarize.ts` if "Connection error." ever appears there. And when an SDK error says only "Connection error.", trace to `err.cause` before blaming the network.
+
+---
+
 ## 2026-10-02 — Deploy guide omitted `OPENAI_API_KEY`; `elaborate` would have failed on Mahārāja's machine
 
 Found while assembling the complete `nrs-transcribe` MCP env block for his install. `src/lib/pipeline/elaborate.ts` embeds the topic with OpenAI `text-embedding-3-small` (`openai().embeddings.create`, via `clients.ts`) for the semantic half of its OpenSearch hybrid search. `clients.ts` throws `OPENAI_API_KEY not set` if absent. Neither `SETUP-CLAUDE-DESKTOP.md` nor the deploy guide / DEPLOY-INSTRUCTIONS listed it — they only listed Groq, Anthropic, Deepgram and `OPENSEARCH_*`.

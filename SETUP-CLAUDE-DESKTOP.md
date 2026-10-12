@@ -54,9 +54,10 @@
      host uses a self-signed certificate — this only weakens TLS verification
      for connections this one process makes, not system-wide.
 
-3. **One extra file needed for `compare_lecture` and `elaborate`** (both
-   depend on it): Gopīparāṇadhana Dāsa's published Bṛhad-bhāgavatāmṛta Vol.1
-   translation/commentary must exist locally at:
+3. **One extra file needed for `compare_lecture`** (and therefore for
+   `elaborate`, which needs the comparison file `compare_lecture` produces —
+   `elaborate` itself does not read this file): Gopīparāṇadhana Dāsa's published
+   Bṛhad-bhāgavatāmṛta Vol.1 translation/commentary must exist locally at:
    ```
    ~/Downloads/FFF/SanatanaGoswami-extracted/md/01_Brhad-Bhagavatamrita__Gopiparanadana-Vol1.md
    ```
